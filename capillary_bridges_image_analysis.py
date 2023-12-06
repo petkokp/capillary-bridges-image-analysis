@@ -2,7 +2,6 @@ import random as rng
 import time
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 import sys
 
 np.set_printoptions(threshold=sys.maxsize)
