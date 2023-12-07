@@ -160,6 +160,10 @@ def process_image(img, index, correct_values=None):
         standard_contour1, standard_contour2)
 
     results = []
+    
+    values = {
+        'neck': neck_distance,
+    }
 
     if correct_values is not None and neck_distance is not None:
         neck_error = calculate_percentage_error(
@@ -214,6 +218,11 @@ def process_image(img, index, correct_values=None):
 
         right_distance = pixels_to_micrometers(
             np.linalg.norm(contour2_start - contour2_end))
+        
+        values['down'] = down_distance
+        values['up'] = up_distance
+        values['left'] = left_distance
+        values['right'] = right_distance
 
         if correct_values:
             results += collect_results(index, down_distance, up_distance,
@@ -233,7 +242,7 @@ def process_image(img, index, correct_values=None):
     else:
         print("Insufficient number of filtered contours.")
 
-    return img_with_line, results
+    return img_with_line, results, values
 
 
 def access_webcam():
@@ -249,7 +258,7 @@ def access_webcam():
         ret, frame = cap.read()
 
         if frame is not None:
-            img, results = process_image(frame, count + 1)
+            img, results, values = process_image(frame, count + 1)
 
             font = cv2.FONT_HERSHEY_SIMPLEX
             new_frame_time = time.time()
@@ -262,10 +271,8 @@ def access_webcam():
             print('fps: ', fps)
             fps = str(fps)
 
-            cv2.putText(frame, fps, (7, 70), font, 3,
-                        (100, 255, 0), 3, cv2.LINE_AA)
-
             if img is not None:
+                print(values)
                 cv2.imshow('Webcam Feed', img)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
