@@ -89,8 +89,10 @@ def collect_results(index, up_distance, down_distance, left_distance, right_dist
 
 
 def calculate_farthest_points(defects, contour):
-    contour_farthest_points = [None, None]
+    contour_farthest_points = [[0, 0], [0, 0]]
     max_distances = [0, 0]
+
+    if defects is None: return contour_farthest_points 
 
     for i in range(defects.shape[0]):
         s, e, f, d = defects[i, 0]
@@ -245,10 +247,10 @@ def process_image(img, index, correct_values=None):
     return img_with_line, results, values
 
 
-def access_webcam():
+def access_webcam(CAM_INDEX):
     count = 0
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(CAM_INDEX)
 
     prev_frame_time = 0
 
@@ -282,4 +284,7 @@ def access_webcam():
     cv2.destroyAllWindows()
 
 
-access_webcam()
+WEB_CAM = 0
+USB_CAM = 1
+
+access_webcam(WEB_CAM)
