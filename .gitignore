@@ -164,4 +164,5 @@ cython_debug/
 /broken
 /images
 /sam_results
-/final_results
+/sam_final_results
+/standard_final_results
