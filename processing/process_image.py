@@ -13,6 +13,11 @@ from .process_sam import process_sam
 
 rng.seed(12345)
 
+def get_filtered_and_sorted_contours(contours):
+    areas = [cv2.contourArea(c) for c in contours]
+    indices = np.argsort(areas)[::-1][:2]
+    return [contours[i] for i in indices]
+
 def standard_process(roi, index, correct_values=None):
     brightened_image = brighten(roi)
 
@@ -32,11 +37,8 @@ def standard_process(roi, index, correct_values=None):
     standard_contours, _ = cv2.findContours(
         standard_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    standard_filtered_contours = sorted(
-        standard_contours, key=lambda x: cv2.contourArea(x), reverse=True)[:2]
-
-    brightened_filtered_contours = sorted(
-        brightened_contours, key=lambda x: cv2.contourArea(x), reverse=True)[:2]
+    standard_filtered_contours = get_filtered_and_sorted_contours(standard_contours)
+    brightened_filtered_contours = get_filtered_and_sorted_contours(brightened_contours)
 
     img_with_line = roi.copy()
     
@@ -46,15 +48,6 @@ def standard_process(roi, index, correct_values=None):
     if len(standard_filtered_contours) >= 2:
         standard_contour1 = np.vstack(standard_filtered_contours[0])
         standard_contour2 = np.vstack(standard_filtered_contours[1])
-    else:
-        return None, None
-    
-    brightened_contour1 = None
-    brightened_contour2 = None
-
-    if brightened_filtered_contours:
-        brightened_contour1 = np.vstack(brightened_filtered_contours[0])
-        brightened_contour2 = np.vstack(brightened_filtered_contours[1])
     else:
         return None, None
 
@@ -73,23 +66,21 @@ def standard_process(roi, index, correct_values=None):
         results.append({'Image': index, 'Type': 'Neck',
                        'Error': f'{neck_distance} µm, {neck_error} % error'})
 
-    hull1 = cv2.convexHull(brightened_contour1, returnPoints=False)
-
-    hull1[::-1].sort(axis=0)
-
-    hull2 = cv2.convexHull(brightened_contour2, returnPoints=False)
-
-    hull2[::-1].sort(axis=0)
-
-    cv2.drawContours(
-        img_with_line, brightened_filtered_contours, -1, (0, 255, 0), 3)
-
-    hull_list = []
-    for i in range(len(brightened_filtered_contours)):
-        hull = cv2.convexHull(brightened_filtered_contours[i])
-        hull_list.append(hull)
-
     if len(brightened_filtered_contours) >= 2:
+        brightened_contour1 = np.vstack(brightened_filtered_contours[0])
+        brightened_contour2 = np.vstack(brightened_filtered_contours[1])
+        
+        hull1 = cv2.convexHull(brightened_contour1, returnPoints=False)
+
+        hull1[::-1].sort(axis=0)
+
+        hull2 = cv2.convexHull(brightened_contour2, returnPoints=False)
+
+        hull2[::-1].sort(axis=0)
+
+        cv2.drawContours(
+            img_with_line, brightened_filtered_contours, -1, (0, 255, 0), 3)
+        
         defects1 = cv2.convexityDefects(brightened_contour1, hull1)
         defects2 = cv2.convexityDefects(brightened_contour2, hull2)
 
@@ -109,17 +100,10 @@ def standard_process(roi, index, correct_values=None):
         if contour2_start[1] < contour2_end[1]:
             contour2_start, contour2_end = contour2_end, contour2_start
 
-        down_distance = pixels_to_micrometers(
-            np.linalg.norm(contour1_end - contour2_end))
-
-        up_distance = pixels_to_micrometers(
-            np.linalg.norm(contour1_start - contour2_start))
-
-        left_distance = pixels_to_micrometers(
-            np.linalg.norm(contour1_start - contour1_end))
-
-        right_distance = pixels_to_micrometers(
-            np.linalg.norm(contour2_start - contour2_end))
+        down_distance = pixels_to_micrometers(np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))
+        up_distance = pixels_to_micrometers(np.sqrt(np.sum((contour1_start - contour2_start) ** 2)))
+        left_distance = pixels_to_micrometers(np.sqrt(np.sum((contour1_start - contour1_end) ** 2)))
+        right_distance = pixels_to_micrometers(np.sqrt(np.sum((contour2_start - contour2_end) ** 2)))
         
         values['down'] = down_distance
         values['up'] = up_distance
@@ -160,14 +144,13 @@ def sam_process(img, index, save_path, correct_values=None):
     img_with_line = img.copy()
     
     if (len(brightened_contours) < 2):
-        cv2.drawContours(img_with_line, brightened_contours, -1, (0, 255, 0), 3)
-        create_dir(f'broken/{save_path}')
-        plt.imsave(f'./broken/{save_path}/{index}.png', img_with_line)
+        # cv2.drawContours(img_with_line, brightened_contours, -1, (0, 255, 0), 3)
+        # create_dir(f'broken/{save_path}')
+        # plt.imsave(f'./broken/{save_path}/{index}.png', img_with_line)
         print('Less than 2 contours found')
         return None, None
-    
-    brightened_filtered_contours = sorted(
-        brightened_contours, key=lambda x: cv2.contourArea(x), reverse=True)[:2]
+
+    brightened_filtered_contours = get_filtered_and_sorted_contours(brightened_contours)
     
     brightened_contour1 = np.vstack(brightened_filtered_contours[0])
     brightened_contour2 = np.vstack(brightened_filtered_contours[1])
@@ -189,11 +172,6 @@ def sam_process(img, index, save_path, correct_values=None):
     hull2[::-1].sort(axis=0)
 
     cv2.drawContours(img_with_line, brightened_filtered_contours, -1, (0, 255, 0), 3)
-    
-    hull_list = []
-    for i in range(len(brightened_filtered_contours)):
-        hull = cv2.convexHull(brightened_filtered_contours[i])
-        hull_list.append(hull)
 
     defects1 = cv2.convexityDefects(brightened_contour1, hull1)
     defects2 = cv2.convexityDefects(brightened_contour2, hull2)
@@ -210,17 +188,10 @@ def sam_process(img, index, save_path, correct_values=None):
     if contour2_start[1] < contour2_end[1]:
         contour2_start, contour2_end = contour2_end, contour2_start
     
-    down_distance = pixels_to_micrometers(
-        np.linalg.norm(contour1_end - contour2_end))
-    
-    up_distance = pixels_to_micrometers(
-        np.linalg.norm(contour1_start - contour2_start))
-    
-    left_distance = pixels_to_micrometers(
-        np.linalg.norm(contour1_start - contour1_end))
-
-    right_distance = pixels_to_micrometers(
-        np.linalg.norm(contour2_start - contour2_end))
+    down_distance = pixels_to_micrometers(np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))
+    up_distance = pixels_to_micrometers(np.sqrt(np.sum((contour1_start - contour2_start) ** 2)))
+    left_distance = pixels_to_micrometers(np.sqrt(np.sum((contour1_start - contour1_end) ** 2)))
+    right_distance = pixels_to_micrometers(np.sqrt(np.sum((contour2_start - contour2_end) ** 2)))
     
     if correct_values:
         results += collect_results(index, down_distance, up_distance, left_distance, right_distance, correct_values)
