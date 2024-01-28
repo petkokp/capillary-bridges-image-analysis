@@ -1,4 +1,7 @@
 import json
+import sys
+import datetime
+from utilities.create_dir import create_dir
 
 def extract_numeric_error(error_str):
     return float(error_str.split(', ')[1].split(' ')[0])
@@ -58,9 +61,20 @@ def compare_models():
   ]
 
   average_errors_per_experiment = compare_experiment_errors(experiment_data)
+  
+  current_date_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+  
+  create_dir('test_results')
+  
+  output_file_name = f"test_results/{current_date_time}_results.txt"
 
-  for i, average_errors in enumerate(average_errors_per_experiment):
-      print(f"{INDEX_TO_MODEL[i]} experiment:")
+  with open(output_file_name, "w") as file:
+    for i, average_errors in enumerate(average_errors_per_experiment):
+        experiment_info = f"{INDEX_TO_MODEL[i]} experiment:"
+        print(experiment_info)
+        file.write(experiment_info + "\n")
 
-      for type_name, average_error in average_errors.items():
-          print(f"  Average error for {type_name}: {average_error:.2f} %")
+        for type_name, average_error in average_errors.items():
+            output_line = f"  Average error for {type_name}: {average_error:.2f} %"
+            print(output_line)
+            file.write(output_line + "\n")
