@@ -166,3 +166,5 @@ cython_debug/
 /sam_results
 /sam_final_results
 /standard_final_results
+NAIVE_values.json
+SAM_values.json

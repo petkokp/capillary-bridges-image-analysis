@@ -1,7 +1,9 @@
 import cv2
+import json
 import sys
 from utilities.visualize_test_results import visualize_test_results
 from utilities.create_dir import create_dir
+from utilities.compare_models import compare_models
 from processing.process_test_data import process_test_data
 
 MODEL = "SAM" # "NAIVE"
@@ -21,7 +23,12 @@ INDEX_TO_SEQUENCE = {
     5: '0%',
 }
 
+with open(f"{MODEL}_values.json", "w") as f:
+    json.dump(sequences_results, f)
+
 visualize_test_results(sequences_results, INDEX_TO_SEQUENCE)
+
+compare_models()
 
 for i, image_sequence in enumerate(all_processed_images):
     SEQ = INDEX_TO_SEQUENCE[i]
