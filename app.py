@@ -23,6 +23,13 @@ values_label.pack(pady=10)
 
 running_camera = False
 
+def copy_to_clipboard():
+    values_text = values_label.cget("text")
+    app.clipboard_clear()
+    app.clipboard_append(values_text)
+    app.update()
+    print("Values copied to clipboard:", values_text)
+
 def open_image():
     global running_camera
     if running_camera:
@@ -90,5 +97,8 @@ realtime_button.pack(side="left", padx=10, pady=10)
 
 image_button = Button(app, text="Process an image", command=open_image)
 image_button.pack(side="right", padx=10, pady=10)
+
+copy_button = Button(app, text="Copy to Clipboard", command=copy_to_clipboard)
+copy_button.pack(side="bottom", pady=10)
 
 app.mainloop()
