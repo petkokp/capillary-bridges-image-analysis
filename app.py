@@ -41,7 +41,8 @@ def open_image():
 
         if processed_image is not None:
             opencv_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB)
-            img = ImageTk.PhotoImage(image=Image.fromarray(opencv_image))
+            resized_image = Image.fromarray(opencv_image).resize((width, height))
+            img = ImageTk.PhotoImage(image=resized_image)
 
             label_widget.photo_image = img
             label_widget.configure(image=img)
@@ -64,7 +65,8 @@ def capture_camera():
 
             if processed_frame is not None:
                 opencv_image = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
-                img = ImageTk.PhotoImage(image=Image.fromarray(opencv_image))
+                resized_image = Image.fromarray(opencv_image).resize((width, height))
+                img = ImageTk.PhotoImage(image=resized_image)
 
                 label_widget.photo_image = img
                 label_widget.configure(image=img)

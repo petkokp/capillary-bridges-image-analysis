@@ -9,7 +9,7 @@ def process_sequence(path, correct_values, model):
 
     for i, img in enumerate(imgs):
         print(f'Image {i}/{len(imgs) - 1}\n')
-        img_with_line, results = process_image(imgs[i], i + 1, extract_sequence_name_from_path(path), model, correct_values)
+        img_with_line, results, _ = process_image(imgs[i], i + 1, extract_sequence_name_from_path(path), model, correct_values)
         
         if img_with_line is not None and results is not None:
             temp = []

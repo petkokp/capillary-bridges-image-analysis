@@ -128,7 +128,9 @@ def standard_process(roi, index, correct_values=None):
     else:
         print("Insufficient number of filtered contours.")
 
-    return img_with_line, results
+
+
+    return img_with_line, results, values
     
 def sam_process(img, index, save_path, correct_values=None):
     brightened_image = process_sam(save_path, index, img)
