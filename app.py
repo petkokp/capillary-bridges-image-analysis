@@ -30,7 +30,7 @@ def copy_to_clipboard():
     app.update()
     print("Values copied to clipboard:", values_text)
 
-def open_image():
+def open_image(MODEL):
     global running_camera
     if running_camera:
         running_camera = False
@@ -42,7 +42,7 @@ def open_image():
     if file_path:
         image = cv2.imread(file_path)
         
-        processed_image, _, values = process_image(image, 0, 'single', 'NAIVE')
+        processed_image, _, values = process_image(image, 0, 'single', MODEL)
         
         update_values_label(values)
 
@@ -95,8 +95,11 @@ def update_values_label(values):
 realtime_button = Button(app, text="Process realtime", command=open_camera)
 realtime_button.pack(side="left", padx=10, pady=10)
 
-image_button = Button(app, text="Process an image", command=open_image)
-image_button.pack(side="right", padx=10, pady=10)
+image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE"))
+image_button_basic.pack(side="right", padx=10, pady=10)
+
+image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM"))
+image_button_basic.pack(side="right", padx=10, pady=10)
 
 copy_button = Button(app, text="Copy to Clipboard", command=copy_to_clipboard)
 copy_button.pack(side="bottom", pady=10)
