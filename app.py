@@ -4,7 +4,7 @@ from PIL import Image, ImageTk
 from tkinter import filedialog
 from processing.process_image import process_image
 
-width, height = 800, 600
+width, height = 800, 700
 
 app = Tk()
 app.title("Capillary bridges image processing")
@@ -58,7 +58,7 @@ def open_camera():
     global running_camera, vid
     if not running_camera:
         running_camera = True
-        vid = cv2.VideoCapture(0)
+        vid = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         capture_camera()
 
 def capture_camera():
