@@ -84,7 +84,7 @@ def open_camera():
     global running_camera, vid
     if not running_camera:
         running_camera = True
-        vid = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        vid = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         capture_camera()
     
 def capture_camera():
