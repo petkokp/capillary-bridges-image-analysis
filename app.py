@@ -2,7 +2,7 @@ from tkinter import *
 import cv2
 from PIL import Image, ImageTk
 from tkinter import filedialog
-from processing.process_image import process_image
+from processing.process_image_basic import process_image_basic
 
 width, height = 800, 700
 
@@ -50,7 +50,7 @@ def open_image(MODEL):
     if file_path:
         image = cv2.imread(file_path)
         
-        processed_image, _, values = process_image(image, 0, 'single', MODEL)
+        processed_image, _, values = process_image_basic(image, 0)
         
         update_values_label(values)
 
@@ -96,7 +96,7 @@ def capture_camera():
             show_cam_frame(frame)
 
         if frame is not None and not is_recording:
-            processed_frame, _, values = process_image(frame, 0, 'realtime', 'NAIVE')
+            processed_frame, _, values = process_image_basic(frame, 0)
             
             update_values_label(values)
 
@@ -129,8 +129,8 @@ stop_button.pack(side="left", padx=10, pady=10)
 image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE"))
 image_button_basic.pack(side="right", padx=10, pady=10)
 
-image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM"))
-image_button_basic.pack(side="right", padx=10, pady=10)
+# image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM"))
+# image_button_basic.pack(side="right", padx=10, pady=10)
 
 copy_button = Button(app, text="Copy to Clipboard", command=copy_to_clipboard)
 copy_button.pack(side="bottom", pady=10)
