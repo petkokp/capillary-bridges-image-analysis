@@ -133,6 +133,6 @@ image_button_basic.pack(side="right", padx=10, pady=10)
 # image_button_basic.pack(side="right", padx=10, pady=10)
 
 copy_button = Button(app, text="Copy to Clipboard", command=copy_to_clipboard)
-copy_button.pack(side="bottom", pady=10)
+copy_button.pack(side="bottom", padx=10, pady=10)
 
 app.mainloop()
