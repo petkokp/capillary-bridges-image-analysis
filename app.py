@@ -1,9 +1,11 @@
 from tkinter import *
 import cv2
+from os.path import join
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from processing.process_image_basic import process_image_basic
 from pypylon import pylon
+from pathlib import Path
 
 width, height = 800, 700
 
@@ -33,7 +35,6 @@ def copy_to_clipboard():
     app.clipboard_clear()
     app.clipboard_append(values_text)
     app.update()
-    print("Values copied to clipboard:", values_text)
 
 def show_cam_frame(frame):
     opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -70,7 +71,10 @@ def start_recording(selected_camera_index: str):
     global is_recording, out, running_camera
     
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640,  480))
+    
+    DOWNLOADS_PATH = str(Path.home() / "Downloads")
+    
+    out = cv2.VideoWriter(join(DOWNLOADS_PATH, "output.avi"), fourcc, 20.0, (640,  480))
     
     is_recording = True
     
@@ -104,7 +108,7 @@ def open_camera(selected_camera_index: str):
         elif selected_camera_index == BASLER_CAMERA:
             basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             
-        capture_camera()
+        capture_camera(selected_camera_index)
 
 def capture_standard():
     _, frame = standard_camera.read()
@@ -120,7 +124,7 @@ def capture_standard():
 
         show_cam_frame(processed_frame)
 
-    label_widget.after(10, capture_camera)
+    label_widget.after(10, lambda: capture_camera(selected_camera_index))
             
 def capture_basler():
     basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly) 
@@ -146,7 +150,7 @@ def capture_basler():
 
                 show_cam_frame(processed_frame)
 
-            label_widget.after(10, capture_camera)
+            label_widget.after(10, lambda: capture_camera(selected_camera_index))
 
         grabResult.Release()
 
@@ -168,6 +172,8 @@ def reset_label():
     label_widget.photo_image = empty_image
 
 def update_values_label(values):
+    if values is None: return
+
     formatted_values = {key.capitalize(): f'{value:.2f} um' for key, value in values.items()}
     values_text = ", ".join([f"{key}: {value}" for key, value in formatted_values.items()])
     values_label.config(text=values_text)
@@ -182,13 +188,13 @@ camera_options = [
 ]
 selected_camera_index = STANDARD_CAMERA 
 
-realtime_button = Button(app, text="Process realtime", command=open_camera(selected_camera_index))
+realtime_button = Button(app, text="Process realtime", command=lambda: open_camera(selected_camera_index))
 realtime_button.pack(side="left", padx=10, pady=10)
 
-start_button = Button(app, text="Start recording", command=start_recording(selected_camera_index))
+start_button = Button(app, text="Start recording", command=lambda: start_recording(selected_camera_index))
 start_button.pack(side="left", padx=10, pady=10)
 
-stop_button = Button(app, text="Stop recording", command=stop_recording(selected_camera_index))
+stop_button = Button(app, text="Stop recording", command=lambda: stop_recording(selected_camera_index))
 stop_button.pack(side="left", padx=10, pady=10)
 
 camera_menu = OptionMenu(app, StringVar(app, camera_options[0]), *camera_options, command=lambda index: select_camera(index))
