@@ -24,6 +24,9 @@ values_label.pack(pady=10)
 running_camera = False
 is_recording = False
 
+STANDARD_CAMERA = "Standard"
+BASLER_CAMERA = "Basler"
+
 def copy_to_clipboard():
     values_text = values_label.cget("text")
     app.clipboard_clear()
@@ -57,7 +60,7 @@ def open_image(MODEL):
         if processed_image is not None:
             show_cam_frame(processed_image)
 
-def start_recording():
+def start_recording(selected_camera_index: str):
     global is_recording, out, running_camera
     
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -66,9 +69,9 @@ def start_recording():
     is_recording = True
     
     if not running_camera:
-        open_camera()
+        open_camera(selected_camera_index)
     
-def stop_recording():
+def stop_recording(selected_camera_index: str):
     global running_camera, is_recording
     
     if not is_recording: return
@@ -80,11 +83,11 @@ def stop_recording():
         vid.release()
         running_camera = False
 
-def open_camera():
+def open_camera(selected_camera_index: str):
     global running_camera, vid
     if not running_camera:
         running_camera = True
-        vid = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        vid = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         capture_camera()
     
 def capture_camera():
@@ -116,15 +119,28 @@ def update_values_label(values):
     formatted_values = {key.capitalize(): f'{value:.2f} um' for key, value in values.items()}
     values_text = ", ".join([f"{key}: {value}" for key, value in formatted_values.items()])
     values_label.config(text=values_text)
+    
+def select_camera(camera_index):
+    global selected_camera_index
+    selected_camera_index = camera_index
 
-realtime_button = Button(app, text="Process realtime", command=open_camera)
+camera_options = [
+    STANDARD_CAMERA,
+    BASLER_CAMERA
+]
+selected_camera_index = STANDARD_CAMERA 
+
+realtime_button = Button(app, text="Process realtime", command=open_camera(selected_camera_index))
 realtime_button.pack(side="left", padx=10, pady=10)
 
-start_button = Button(app, text="Start Recording", command=start_recording)
+start_button = Button(app, text="Start recording", command=start_recording(selected_camera_index))
 start_button.pack(side="left", padx=10, pady=10)
 
-stop_button = Button(app, text="Stop Recording", command=stop_recording)
+stop_button = Button(app, text="Stop recording", command=stop_recording(selected_camera_index))
 stop_button.pack(side="left", padx=10, pady=10)
+
+camera_menu = OptionMenu(app, StringVar(app, camera_options[0]), *camera_options, command=lambda index: select_camera(index))
+camera_menu.pack(side="right", padx=10, pady=10)
 
 image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE"))
 image_button_basic.pack(side="right", padx=10, pady=10)
