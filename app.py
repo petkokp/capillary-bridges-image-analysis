@@ -26,6 +26,7 @@ values_label.pack(pady=10)
 
 running_camera = False
 is_recording = False
+is_grabbing = False
 
 STANDARD_CAMERA = "Standard"
 BASLER_CAMERA = "Basler"
@@ -37,6 +38,8 @@ def copy_to_clipboard():
     app.update()
 
 def show_cam_frame(frame):
+    if frame is None: return
+    
     opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     resized_image = Image.fromarray(opencv_image).resize((width, height))
     img = ImageTk.PhotoImage(image=resized_image)
@@ -99,7 +102,8 @@ def stop_recording(selected_camera_index: str):
         running_camera = False
 
 def open_camera(selected_camera_index: str):
-    global running_camera, standard_camera, basler_camera
+    global running_camera, standard_camera, basler_camera, is_grabbing, converter
+    is_grabbing = False
     if not running_camera:
         running_camera = True
         
@@ -127,14 +131,16 @@ def capture_standard():
     label_widget.after(10, lambda: capture_camera(selected_camera_index))
             
 def capture_basler():
-    basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly) 
-    converter = pylon.ImageFormatConverter()
-    converter.OutputPixelFormat = pylon.PixelType_BGR8packed
-    converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
-    
-    while basler_camera.IsGrabbing():
+        global is_grabbing, converter
+        if not is_grabbing:
+            basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+            is_grabbing = True
+            converter = pylon.ImageFormatConverter()
+            converter.OutputPixelFormat = pylon.PixelType_BGR8packed
+            converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
+        
+    # while basler_camera.IsGrabbing():
         grabResult = basler_camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-
         if grabResult.GrabSucceeded():
             image = converter.Convert(grabResult)
             frame = image.GetArray()
@@ -165,6 +171,7 @@ def capture_camera(selected_camera_index: str):
             standard_camera.release()
         elif selected_camera_index == BASLER_CAMERA:
             basler_camera.StopGrabbing()
+            is_grabbing = False
         reset_label()
 
 def reset_label():
@@ -186,7 +193,7 @@ camera_options = [
     STANDARD_CAMERA,
     BASLER_CAMERA
 ]
-selected_camera_index = STANDARD_CAMERA 
+selected_camera_index = BASLER_CAMERA 
 
 realtime_button = Button(app, text="Process realtime", command=lambda: open_camera(selected_camera_index))
 realtime_button.pack(side="left", padx=10, pady=10)
@@ -197,7 +204,7 @@ start_button.pack(side="left", padx=10, pady=10)
 stop_button = Button(app, text="Stop recording", command=lambda: stop_recording(selected_camera_index))
 stop_button.pack(side="left", padx=10, pady=10)
 
-camera_menu = OptionMenu(app, StringVar(app, camera_options[0]), *camera_options, command=lambda index: select_camera(index))
+camera_menu = OptionMenu(app, StringVar(app, camera_options[1]), *camera_options, command=lambda index: select_camera(index))
 camera_menu.pack(side="right", padx=10, pady=10)
 
 image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE", selected_camera_index))
