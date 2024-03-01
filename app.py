@@ -1,11 +1,13 @@
+from openpyxl import Workbook
 from tkinter import *
 import cv2
-from os.path import join
+from os.path import join, exists, expanduser
+from os import makedirs
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from processing.process_image_basic import process_image_basic
 from pypylon import pylon
-from pathlib import Path
+from datetime import datetime
 
 width, height = 800, 700
 
@@ -30,6 +32,35 @@ is_grabbing = False
 
 STANDARD_CAMERA = "Standard"
 BASLER_CAMERA = "Basler"
+
+RECORDINGS_FOLDER = "recordings"
+
+base_dir = join(expanduser("~"), "Desktop", "Capillary bridges image analysis")
+current_folder_path = None
+workbook = None
+worksheet = None
+image_count = 0
+
+def create_images_folder_structure():
+    global current_folder_path, workbook, worksheet
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    current_folder_path = join(base_dir, timestamp)
+    makedirs(current_folder_path)
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["Image", "Neck", "Down", "Up", "Left", "Right"])
+
+    workbook.save(join(current_folder_path, "measured_values.xlsx"))
+    
+def create_recordings_folder_structure():
+    RECORDINGS_PATH = join(base_dir, RECORDINGS_FOLDER)
+    
+    recordings_folder_exists = exists(RECORDINGS_PATH)
+    
+    if not recordings_folder_exists: makedirs(RECORDINGS_PATH)
 
 def copy_to_clipboard():
     values_text = values_label.cget("text")
@@ -73,11 +104,17 @@ def open_image(MODEL, selected_camera_index: str):
 def start_recording(selected_camera_index: str):
     global is_recording, out, running_camera
     
+    create_recordings_folder_structure()
+    
+    save_button.config(state="disabled")
+    
+    stop_button.config(state="normal")
+    
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     
-    DOWNLOADS_PATH = str(Path.home() / "Downloads")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     
-    out = cv2.VideoWriter(join(DOWNLOADS_PATH, "output.avi"), fourcc, 20.0, (640,  480))
+    out = cv2.VideoWriter(join(base_dir, join(RECORDINGS_FOLDER, f"{timestamp}.avi")), fourcc, 20.0, (640,  480))
     
     is_recording = True
     
@@ -91,6 +128,9 @@ def stop_recording(selected_camera_index: str):
     
     out.release()
     is_recording = False
+    
+    stop_button.config(state="disabled")
+    
     if running_camera:
         reset_label()
         
@@ -104,6 +144,9 @@ def stop_recording(selected_camera_index: str):
 def open_camera(selected_camera_index: str):
     global running_camera, standard_camera, basler_camera, is_grabbing, converter
     is_grabbing = False
+    
+    if not is_recording: create_images_folder_structure()
+    
     if not running_camera:
         running_camera = True
         
@@ -113,8 +156,30 @@ def open_camera(selected_camera_index: str):
             basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             
         capture_camera(selected_camera_index)
+        if not is_recording: save_button.config(state="normal")
+        
+def save_frame(frame, processed_frame, values):
+    global workbook, worksheet, image_count
+    
+    image_count += 1
+    raw_image_filename = f"raw_{image_count}.jpg"
+    processed_image_filename = f"processed_{image_count}.jpg"
+
+    cv2.imwrite(join(current_folder_path, raw_image_filename), frame)
+    cv2.imwrite(join(current_folder_path, processed_image_filename), processed_frame)
+    
+    values_list = [values[key] for key in ["neck", "down", "up", "left", "right"]]
+
+    worksheet.append([worksheet.max_row, *values_list])
+    workbook.save(join(current_folder_path, "measured_values.xlsx"))
+    
+def save_current_frame():
+    global frame, processed_frame, values
+    if frame is not None and processed_frame is not None and values is not None:
+        save_frame(frame, processed_frame, values)
 
 def capture_standard():
+    global frame, processed_frame, values
     _, frame = standard_camera.read()
         
     if frame is not None and is_recording:
@@ -131,7 +196,7 @@ def capture_standard():
     label_widget.after(10, lambda: capture_camera(selected_camera_index))
             
 def capture_basler():
-        global is_grabbing, converter
+        global is_grabbing, converter, frame, processed_frame
         if not is_grabbing:
             basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             is_grabbing = True
@@ -177,6 +242,7 @@ def capture_camera(selected_camera_index: str):
 def reset_label():
     label_widget.configure(image=empty_image)
     label_widget.photo_image = empty_image
+    save_button.config(state="disabled")
 
 def update_values_label(values):
     if values is None: return
@@ -198,10 +264,13 @@ selected_camera_index = BASLER_CAMERA
 realtime_button = Button(app, text="Process realtime", command=lambda: open_camera(selected_camera_index))
 realtime_button.pack(side="left", padx=10, pady=10)
 
+save_button = Button(app, text="Save image", command=lambda: save_current_frame(), state="disabled")
+save_button.pack(side="left", padx=10, pady=10)
+
 start_button = Button(app, text="Start recording", command=lambda: start_recording(selected_camera_index))
 start_button.pack(side="left", padx=10, pady=10)
 
-stop_button = Button(app, text="Stop recording", command=lambda: stop_recording(selected_camera_index))
+stop_button = Button(app, text="Stop recording", command=lambda: stop_recording(selected_camera_index), state="disabled")
 stop_button.pack(side="left", padx=10, pady=10)
 
 camera_menu = OptionMenu(app, StringVar(app, camera_options[1]), *camera_options, command=lambda index: select_camera(index))
