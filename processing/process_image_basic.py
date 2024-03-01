@@ -5,6 +5,7 @@ from utilities.calculate_neck_properties import calculate_neck_properties
 from utilities.collect_results import collect_results
 from utilities.pixels_to_micrometers import pixels_to_micrometers
 from utilities.calculate_farthest_points import calculate_farthest_points
+from utilities.construct_ellipse_from_contour import construct_ellipse_from_contour
 from .brighten import brighten
 
 def get_filtered_and_sorted_contours(contours):
@@ -43,7 +44,12 @@ def standard_process(roi, index, correct_values=None):
 
     if len(standard_filtered_contours) >= 2:
         standard_contour1 = np.vstack(standard_filtered_contours[0])
+        
+        construct_ellipse_from_contour(img_with_line, standard_contour1)
+                
         standard_contour2 = np.vstack(standard_filtered_contours[1])
+        
+        construct_ellipse_from_contour(img_with_line, standard_contour2)
     else:
         return None, None, None
 
@@ -95,6 +101,8 @@ def standard_process(roi, index, correct_values=None):
 
         if contour2_start[1] < contour2_end[1]:
             contour2_start, contour2_end = contour2_end, contour2_start
+            
+            
 
         down_distance = pixels_to_micrometers(
             np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))
