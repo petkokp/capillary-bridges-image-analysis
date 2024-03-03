@@ -9,7 +9,7 @@ from processing.process_image_basic import process_image_basic
 from pypylon import pylon
 from datetime import datetime
 
-width, height = 800, 700
+width, height = 1300, 700
 
 app = Tk()
 app.title("Capillary bridges image processing")
@@ -72,7 +72,13 @@ def show_cam_frame(frame):
     if frame is None: return
     
     opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    resized_image = Image.fromarray(opencv_image).resize((width, height))
+    
+    img = Image.fromarray(opencv_image)
+    
+    wpercent = (width/float(img.size[0]))
+    hsize = int((float(img.size[1])*float(wpercent)))
+    resized_image = img.resize((width,hsize), Image.Resampling.LANCZOS)
+    
     img = ImageTk.PhotoImage(image=resized_image)
     label_widget.photo_image = img
     label_widget.configure(image=img)
