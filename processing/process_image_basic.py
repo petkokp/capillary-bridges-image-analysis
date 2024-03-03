@@ -44,12 +44,10 @@ def standard_process(roi, index, correct_values=None):
 
     if len(standard_filtered_contours) >= 2:
         standard_contour1 = np.vstack(standard_filtered_contours[0])
-        
-        construct_ellipse_from_contour(img_with_line, standard_contour1)
                 
         standard_contour2 = np.vstack(standard_filtered_contours[1])
         
-        construct_ellipse_from_contour(img_with_line, standard_contour2)
+        # construct_ellipse_from_contour(img_with_line, standard_contour2)
     else:
         return None, None, None
 
@@ -95,14 +93,42 @@ def standard_process(roi, index, correct_values=None):
             contour1_farthest_points[0]), np.array(contour1_farthest_points[1])
         contour2_start, contour2_end = np.array(
             contour2_farthest_points[0]), np.array(contour2_farthest_points[1])
+        
+        brightened_contours = [brightened_contour1, brightened_contour2]
+        
+        bounding_boxes = [cv2.boundingRect(contour) for contour in brightened_contours]
+
+        leftmost_index = 0 if bounding_boxes[0][0] < bounding_boxes[1][0] else 1
+        rightmost_index = 1 - leftmost_index
+
+        left_contour = brightened_contours[leftmost_index]
+        right_contour = brightened_contours[rightmost_index]
+        
+        left_start_point = []
+        left_end_point = []
+        right_start_point = []
+        right_end_point = []
+        
+        if left_contour is brightened_contour1:
+            left_start_point = contour1_start
+            left_end_point = contour1_end
+            right_start_point = contour2_start
+            right_end_point = contour2_end
+        else:
+            left_start_point = contour2_start
+            left_end_point = contour2_end
+            right_start_point = contour1_start
+            right_end_point = contour1_end
+        
+        construct_ellipse_from_contour(img_with_line, left_contour, left_start_point, left_end_point)
+        
+        construct_ellipse_from_contour(img_with_line, right_contour, right_start_point, right_end_point, is_right=True)
 
         if contour1_start[1] < contour1_end[1]:
             contour1_start, contour1_end = contour1_end, contour1_start
 
         if contour2_start[1] < contour2_end[1]:
             contour2_start, contour2_end = contour2_end, contour2_start
-            
-            
 
         down_distance = pixels_to_micrometers(
             np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))

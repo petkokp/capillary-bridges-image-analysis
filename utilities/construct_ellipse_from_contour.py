@@ -1,41 +1,45 @@
 import cv2
-import math
+import numpy as np
 
-def construct_ellipse_from_contour(img, contour):
-  ellipse = cv2.fitEllipse(contour)
+def construct_ellipse_from_contour(img, contour, start_point, end_point, is_right=False):
+    end_index = np.where((contour == start_point).all(axis=1))[0][0]
+    start_index = np.where((contour == end_point).all(axis=1))[0][0]
+    
+    is_reverse = start_index > end_index
 
-  (xc,yc),(d1,d2),angle = ellipse
+    sliced_contour = []
 
-  # draw ellipse in green
-  cv2.ellipse(img, ellipse, (0, 255, 0), 3)
+    if is_reverse:
+        sliced_contour = contour[end_index:start_index]
+    else:
+        sliced_contour = contour[start_index: end_index]
+    
+    if len(sliced_contour) == 0: return
+    
+    line_edge = img.shape[1] if is_right else 0
 
-  # draw circle at center
-  xc, yc = ellipse[0]
-  cv2.circle(img, (int(xc),int(yc)), 10, (255, 255, 255), -1)
+    _, y_start = start_point
+    _, y_end = end_point
 
-  # draw major axis line in red
-  rmajor = max(d1,d2)/2
-  if angle > 90:
-      angle = angle - 90
-  else:
-      angle = angle + 90
+    intersection_start = ()
+    intersection_end = ()
+    
+    if is_reverse:
+        if is_right:
+            intersection_start = (line_edge, y_end)
+            intersection_end = (line_edge, y_start)    
+        else:
+            intersection_start = (line_edge, y_start)
+            intersection_end = (line_edge, y_end)
+    else:
+        intersection_start = (line_edge, y_start)
+        intersection_end = (line_edge, y_end)
 
-  x1 = xc + math.cos(math.radians(angle))*rmajor
-  y1 = yc + math.sin(math.radians(angle))*rmajor
-  x2 = xc + math.cos(math.radians(angle+180))*rmajor
-  y2 = yc + math.sin(math.radians(angle+180))*rmajor
-  cv2.line(img, (int(x1),int(y1)), (int(x2),int(y2)), (0, 0, 255), 3)
+    sliced_contour = np.vstack((sliced_contour, [intersection_start, intersection_end]))
 
-  # draw minor axis line in blue
-  rminor = min(d1,d2)/2
-  if angle > 90:
-      angle = angle - 90
-  else:
-      angle = angle + 90
-
-  x1 = xc + math.cos(math.radians(angle))*rminor
-  y1 = yc + math.sin(math.radians(angle))*rminor
-  x2 = xc + math.cos(math.radians(angle+180))*rminor
-  y2 = yc + math.sin(math.radians(angle+180))*rminor
+    # cv2.drawContours(img, [sliced_contour], -1, (255, 255, 255), 2)
+    
+    ellipse = cv2.fitEllipse(sliced_contour)
   
-  cv2.line(img, (int(x1),int(y1)), (int(x2),int(y2)), (255, 0, 0), 3)
+    cv2.ellipse(img, ellipse, (255, 255, 255), 3)
+    return
