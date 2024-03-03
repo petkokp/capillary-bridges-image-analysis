@@ -46,8 +46,6 @@ def standard_process(roi, index, correct_values=None):
         standard_contour1 = np.vstack(standard_filtered_contours[0])
                 
         standard_contour2 = np.vstack(standard_filtered_contours[1])
-        
-        # construct_ellipse_from_contour(img_with_line, standard_contour2)
     else:
         return None, None, None
 
