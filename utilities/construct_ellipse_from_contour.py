@@ -48,21 +48,16 @@ def construct_ellipse_from_contour(img, contour, start_point, end_point, is_righ
     # OpenCV ellipse requires atleast 5 points
     if len(sliced_contour) < 5:
         return
-
-    # cv2.drawContours(img, [sliced_contour], -1, (255, 255, 255), 2)
     
     ellipse = cv2.fitEllipse(sliced_contour)
     
     (xc,yc),(d1,d2),angle = ellipse
 
-    # draw ellipse in white
     cv2.ellipse(img, ellipse, (255, 255, 255), 3)
 
-    # draw circle at center
     xc, yc = ellipse[0]
     cv2.circle(img, (int(xc),int(yc)), 10, (255, 255, 255), -1)
 
-    # draw major axis line in red
     rmajor = max(d1,d2)/2
     if angle > 90:
         angle = angle - 90
@@ -75,7 +70,6 @@ def construct_ellipse_from_contour(img, contour, start_point, end_point, is_righ
     y2 = yc + math.sin(math.radians(angle+180))*rmajor
     cv2.line(img, (int(x1),int(y1)), (int(x2),int(y2)), (0, 0, 255), 3)
 
-    # draw minor axis line in blue
     rminor = min(d1,d2)/2
     if angle > 90:
         angle = angle - 90

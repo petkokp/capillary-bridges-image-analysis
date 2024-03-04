@@ -157,7 +157,7 @@ def open_camera(selected_camera_index: str):
         running_camera = True
         
         if selected_camera_index == STANDARD_CAMERA:
-            standard_camera = cv2.VideoCapture(0, cv2.CAP_DSHOW) # TO DO - CHANGE INDEX TO 1
+            standard_camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         elif selected_camera_index == BASLER_CAMERA:
             basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             
@@ -210,7 +210,6 @@ def capture_basler():
             converter.OutputPixelFormat = pylon.PixelType_BGR8packed
             converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
         
-    # while basler_camera.IsGrabbing():
         grabResult = basler_camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         if grabResult.GrabSucceeded():
             image = converter.Convert(grabResult)
