@@ -23,7 +23,7 @@ empty_image = ImageTk.PhotoImage(Image.new("RGB", (width, height), "white"))
 label_widget.configure(image=empty_image)
 label_widget.photo_image = empty_image
 
-values_label = Label(app, text="", font=("Helvetica", 12))
+values_label = Label(app, text="", font=("Helvetica", 10))
 values_label.pack(pady=10)
 
 running_camera = False
@@ -51,7 +51,7 @@ def create_images_folder_structure():
 
     workbook = Workbook()
     worksheet = workbook.active
-    worksheet.append(["Image", "Neck", "Down", "Up", "Left", "Right"])
+    worksheet.append(["Image", "Neck", "Down", "Up", "Left", "Right", "Left major", "Left minor", "Right major", "Right minor", "Left average", "Right average"])
 
     workbook.save(join(current_folder_path, "measured_values.xlsx"))
     
@@ -174,7 +174,7 @@ def save_frame(frame, processed_frame, values):
     cv2.imwrite(join(current_folder_path, raw_image_filename), frame)
     cv2.imwrite(join(current_folder_path, processed_image_filename), processed_frame)
     
-    values_list = [values[key] for key in ["neck", "down", "up", "left", "right"]]
+    values_list = [values[key] for key in ["neck", "down", "up", "left", "right", "left major", "left minor", "right major", "right minor", "left average", "right average"]]
 
     worksheet.append([worksheet.max_row, *values_list])
     workbook.save(join(current_folder_path, "measured_values.xlsx"))

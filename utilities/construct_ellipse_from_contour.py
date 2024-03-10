@@ -21,7 +21,7 @@ def construct_ellipse_from_contour(img, contour, start_point, end_point, is_righ
     else:
         sliced_contour = contour[start_index: end_index]
     
-    if len(sliced_contour) == 0: return
+    if len(sliced_contour) == 0: return None, None
     
     line_edge = img.shape[1] if is_right else 0
 
@@ -46,7 +46,7 @@ def construct_ellipse_from_contour(img, contour, start_point, end_point, is_righ
 
     # OpenCV ellipse requires atleast 5 points
     if len(sliced_contour) < 5:
-        return
+        return None, None
     
     ellipse = cv2.fitEllipse(sliced_contour)
     

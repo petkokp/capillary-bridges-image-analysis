@@ -128,6 +128,29 @@ def standard_process(roi, index, correct_values=None):
         if contour2_start[1] < contour2_end[1]:
             contour2_start, contour2_end = contour2_end, contour2_start
 
+        if left_major_axis and left_minor_axis:
+            left_major_distance = pixels_to_micrometers(
+                np.sqrt((left_major_axis[0][0] - left_major_axis[1][0]) ** 2 + (left_major_axis[0][1] - left_major_axis[1][1]) ** 2))
+
+            left_minor_distance = pixels_to_micrometers(
+                np.sqrt((left_minor_axis[0][0] - left_minor_axis[1][0]) ** 2 + (left_minor_axis[0][1] - left_minor_axis[1][1]) ** 2))
+            
+            values['left major'] = left_major_distance
+            values['left minor'] = left_minor_distance
+            values['left average'] = (left_major_distance + left_minor_distance) / 2
+            
+        if right_major_axis and right_minor_axis:
+            right_major_distance = pixels_to_micrometers(
+                np.sqrt((right_major_axis[0][0] - right_major_axis[1][0]) ** 2 + (right_major_axis[0][1] - right_major_axis[1][1]) ** 2))
+
+            right_minor_distance = pixels_to_micrometers(
+                np.sqrt((right_minor_axis[0][0] - right_minor_axis[1][0]) ** 2 + (right_minor_axis[0][1] - right_minor_axis[1][1]) ** 2))
+            
+            values['right major'] = right_major_distance
+            values['right minor'] = right_minor_distance
+            values['right average'] = (right_major_distance + right_minor_distance) / 2
+            
+            
         down_distance = pixels_to_micrometers(
             np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))
         up_distance = pixels_to_micrometers(
@@ -136,27 +159,11 @@ def standard_process(roi, index, correct_values=None):
             np.sqrt(np.sum((contour1_start - contour1_end) ** 2)))
         right_distance = pixels_to_micrometers(
             np.sqrt(np.sum((contour2_start - contour2_end) ** 2)))
-        
-        left_major_distance = pixels_to_micrometers(
-            np.sqrt((left_major_axis[0][0] - left_major_axis[1][0]) ** 2 + (left_major_axis[0][1] - left_major_axis[1][1]) ** 2))
-
-        left_minor_distance = pixels_to_micrometers(
-            np.sqrt((left_minor_axis[0][0] - left_minor_axis[1][0]) ** 2 + (left_minor_axis[0][1] - left_minor_axis[1][1]) ** 2))
-
-        right_major_distance = pixels_to_micrometers(
-            np.sqrt((right_major_axis[0][0] - right_major_axis[1][0]) ** 2 + (right_major_axis[0][1] - right_major_axis[1][1]) ** 2))
-
-        right_minor_distance = pixels_to_micrometers(
-            np.sqrt((right_minor_axis[0][0] - right_minor_axis[1][0]) ** 2 + (right_minor_axis[0][1] - right_minor_axis[1][1]) ** 2))
 
         values['down'] = down_distance
         values['up'] = up_distance
         values['left'] = left_distance
         values['right'] = right_distance
-        values['left major'] = left_major_distance
-        values['left minor'] = left_minor_distance
-        values['right major'] = right_major_distance
-        values['right minor'] = right_minor_distance
 
         if correct_values:
             results += collect_results(index, down_distance, up_distance,
