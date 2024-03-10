@@ -7,7 +7,6 @@ def construct_ellipse_from_contour(img, contour, start_point, end_point, is_righ
     sliced_start = np.where((contour == end_point).all(axis=1))
     
     if len(sliced_end[0]) == 0 or len(sliced_start[0]) == 0:
-        print('returning')
         return
     
     start_index = sliced_start[0][0]
@@ -64,11 +63,11 @@ def construct_ellipse_from_contour(img, contour, start_point, end_point, is_righ
     else:
         angle = angle + 90
 
-    x1 = xc + math.cos(math.radians(angle))*rmajor
-    y1 = yc + math.sin(math.radians(angle))*rmajor
-    x2 = xc + math.cos(math.radians(angle+180))*rmajor
-    y2 = yc + math.sin(math.radians(angle+180))*rmajor
-    cv2.line(img, (int(x1),int(y1)), (int(x2),int(y2)), (0, 0, 255), 3)
+    x1_major = xc + math.cos(math.radians(angle))*rmajor
+    y1_major = yc + math.sin(math.radians(angle))*rmajor
+    x2_major = xc + math.cos(math.radians(angle+180))*rmajor
+    y2_major = yc + math.sin(math.radians(angle+180))*rmajor
+    cv2.line(img, (int(x1_major),int(y1_major)), (int(x2_major),int(y2_major)), (0, 0, 255), 3)
 
     rminor = min(d1,d2)/2
     if angle > 90:
@@ -76,8 +75,10 @@ def construct_ellipse_from_contour(img, contour, start_point, end_point, is_righ
     else:
         angle = angle + 90
 
-    x1 = xc + math.cos(math.radians(angle))*rminor
-    y1 = yc + math.sin(math.radians(angle))*rminor
-    x2 = xc + math.cos(math.radians(angle+180))*rminor
-    y2 = yc + math.sin(math.radians(angle+180))*rminor
-    cv2.line(img, (int(x1),int(y1)), (int(x2),int(y2)), (255, 0, 0), 3)
+    x1_minor = xc + math.cos(math.radians(angle))*rminor
+    y1_minor = yc + math.sin(math.radians(angle))*rminor
+    x2_minor = xc + math.cos(math.radians(angle+180))*rminor
+    y2_minor = yc + math.sin(math.radians(angle+180))*rminor
+    cv2.line(img, (int(x1_minor),int(y1_minor)), (int(x2_minor),int(y2_minor)), (255, 0, 0), 3)
+    
+    return ((x1_major, y1_major), (x2_major, y2_major)), ((x1_minor, y1_minor), (x2_minor, y2_minor))

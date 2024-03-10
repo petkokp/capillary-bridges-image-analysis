@@ -118,9 +118,9 @@ def standard_process(roi, index, correct_values=None):
             right_start_point = contour1_start
             right_end_point = contour1_end
         
-        construct_ellipse_from_contour(img_with_line, left_contour, left_start_point, left_end_point)
+        left_major_axis, left_minor_axis = construct_ellipse_from_contour(img_with_line, left_contour, left_start_point, left_end_point)
         
-        construct_ellipse_from_contour(img_with_line, right_contour, right_start_point, right_end_point, is_right=True)
+        right_major_axis, right_minor_axis = construct_ellipse_from_contour(img_with_line, right_contour, right_start_point, right_end_point, is_right=True)
 
         if contour1_start[1] < contour1_end[1]:
             contour1_start, contour1_end = contour1_end, contour1_start
@@ -136,11 +136,27 @@ def standard_process(roi, index, correct_values=None):
             np.sqrt(np.sum((contour1_start - contour1_end) ** 2)))
         right_distance = pixels_to_micrometers(
             np.sqrt(np.sum((contour2_start - contour2_end) ** 2)))
+        
+        left_major_distance = pixels_to_micrometers(
+            np.sqrt((left_major_axis[0][0] - left_major_axis[1][0]) ** 2 + (left_major_axis[0][1] - left_major_axis[1][1]) ** 2))
+
+        left_minor_distance = pixels_to_micrometers(
+            np.sqrt((left_minor_axis[0][0] - left_minor_axis[1][0]) ** 2 + (left_minor_axis[0][1] - left_minor_axis[1][1]) ** 2))
+
+        right_major_distance = pixels_to_micrometers(
+            np.sqrt((right_major_axis[0][0] - right_major_axis[1][0]) ** 2 + (right_major_axis[0][1] - right_major_axis[1][1]) ** 2))
+
+        right_minor_distance = pixels_to_micrometers(
+            np.sqrt((right_minor_axis[0][0] - right_minor_axis[1][0]) ** 2 + (right_minor_axis[0][1] - right_minor_axis[1][1]) ** 2))
 
         values['down'] = down_distance
         values['up'] = up_distance
         values['left'] = left_distance
         values['right'] = right_distance
+        values['left major'] = left_major_distance
+        values['left minor'] = left_minor_distance
+        values['right major'] = right_major_distance
+        values['right minor'] = right_minor_distance
 
         if correct_values:
             results += collect_results(index, down_distance, up_distance,
