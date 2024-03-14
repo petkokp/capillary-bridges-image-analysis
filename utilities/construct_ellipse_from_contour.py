@@ -7,7 +7,7 @@ def construct_ellipse_from_contour(img, contour, start_point, end_point, is_righ
     sliced_start = np.where((contour == end_point).all(axis=1))
     
     if len(sliced_end[0]) == 0 or len(sliced_start[0]) == 0:
-        return
+        return None, None
     
     start_index = sliced_start[0][0]
     end_index = sliced_end[0][0]

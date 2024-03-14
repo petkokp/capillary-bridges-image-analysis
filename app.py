@@ -40,6 +40,7 @@ current_folder_path = None
 workbook = None
 worksheet = None
 image_count = 0
+values = None
 
 def create_images_folder_structure():
     global current_folder_path, workbook, worksheet
