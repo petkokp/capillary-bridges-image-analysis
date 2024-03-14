@@ -1,3 +1,7 @@
+# Run GUI app:
+
+`python app.py`
+
 # Run against test data:
 
 MODEL = { "NAIVE", "SAM" }

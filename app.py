@@ -29,6 +29,7 @@ values_label.pack(pady=10)
 running_camera = False
 is_recording = False
 is_grabbing = False
+should_process_image = True
 
 STANDARD_CAMERA = "Standard"
 BASLER_CAMERA = "Basler"
@@ -149,8 +150,9 @@ def stop_recording(selected_camera_index: str):
         running_camera = False
 
 def open_camera(selected_camera_index: str):
-    global running_camera, standard_camera, basler_camera, is_grabbing, converter
+    global running_camera, standard_camera, basler_camera, is_grabbing, converter, image_count
     is_grabbing = False
+    image_count = 0
     
     if not is_recording: create_images_folder_structure()
     
@@ -186,7 +188,7 @@ def save_current_frame():
         save_frame(frame, processed_frame, values)
 
 def capture_standard():
-    global frame, processed_frame, values
+    global frame, processed_frame, values, should_process_image
     _, frame = standard_camera.read()
         
     if frame is not None and is_recording:
@@ -198,12 +200,12 @@ def capture_standard():
         
         update_values_label(values)
 
-        show_cam_frame(processed_frame)
+        show_cam_frame(processed_frame if should_process_image else frame)
 
     label_widget.after(10, lambda: capture_camera(selected_camera_index))
             
 def capture_basler():
-        global is_grabbing, converter, frame, processed_frame
+        global is_grabbing, converter, frame, processed_frame, should_process_image
         if not is_grabbing:
             basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             is_grabbing = True
@@ -225,13 +227,14 @@ def capture_basler():
                 
                 update_values_label(values)
 
-                show_cam_frame(processed_frame)
+                show_cam_frame(processed_frame if should_process_image else frame)
 
             label_widget.after(10, lambda: capture_camera(selected_camera_index))
 
         grabResult.Release()
 
 def capture_camera(selected_camera_index: str):
+    global is_grabbing
     if running_camera:
         if selected_camera_index == STANDARD_CAMERA:
             capture_standard()
@@ -244,6 +247,10 @@ def capture_camera(selected_camera_index: str):
             basler_camera.StopGrabbing()
             is_grabbing = False
         reset_label()
+        
+def toggle_processing():
+    global should_process_image
+    should_process_image = not should_process_image
 
 def reset_label():
     label_widget.configure(image=empty_image)
@@ -284,6 +291,9 @@ camera_menu.pack(side="right", padx=10, pady=10)
 
 image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE", selected_camera_index))
 image_button_basic.pack(side="right", padx=10, pady=10)
+
+toggle_button = Button(app, text="Toggle processing", command=toggle_processing)
+toggle_button.pack(side="right", padx=10, pady=10)
 
 # image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM"))
 # image_button_basic.pack(side="right", padx=10, pady=10)
