@@ -6,6 +6,7 @@ from utilities.collect_results import collect_results
 from utilities.pixels_to_micrometers import pixels_to_micrometers
 from utilities.calculate_farthest_points import calculate_farthest_points
 from utilities.construct_ellipse_from_contour import construct_ellipse_from_contour
+from utilities.calculations import calculate_base, calculate_height, calculate_x, calculate_y
 from .brighten import brighten
 
 def get_filtered_and_sorted_contours(contours):
@@ -150,7 +151,6 @@ def standard_process(roi, index, correct_values=None):
             values['right minor'] = right_minor_distance
             values['right average'] = (right_major_distance + right_minor_distance) / 2
             
-            
         down_distance = pixels_to_micrometers(
             np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))
         up_distance = pixels_to_micrometers(
@@ -164,6 +164,15 @@ def standard_process(roi, index, correct_values=None):
         values['up'] = up_distance
         values['left'] = left_distance
         values['right'] = right_distance
+        
+        base = calculate_base(up_distance, down_distance)
+        values['base'] = base
+        height = calculate_height(left_distance, right_distance)
+        values['height'] = height
+        x = calculate_x(base, neck_distance)
+        values['x'] = x
+        values['1/x'] = 1 / x
+        values['y'] = calculate_y(height, neck_distance)
 
         if correct_values:
             results += collect_results(index, down_distance, up_distance,

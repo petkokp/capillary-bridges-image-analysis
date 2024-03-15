@@ -53,7 +53,7 @@ def create_images_folder_structure():
 
     workbook = Workbook()
     worksheet = workbook.active
-    worksheet.append(["Image", "Neck", "Down", "Up", "Left", "Right", "Left major", "Left minor", "Right major", "Right minor", "Left average", "Right average"])
+    worksheet.append(["Image", "Neck", "Down", "Up", "Left", "Right", "Left major", "Left minor", "Right major", "Right minor", "Left average", "Right average", "Base", "Height", "x", "1/x", "y"])
 
     workbook.save(join(current_folder_path, "measured_values.xlsx"))
     
@@ -177,7 +177,7 @@ def save_frame(frame, processed_frame, values):
     cv2.imwrite(join(current_folder_path, raw_image_filename), frame)
     cv2.imwrite(join(current_folder_path, processed_image_filename), processed_frame)
     
-    values_list = [values[key] for key in ["neck", "down", "up", "left", "right", "left major", "left minor", "right major", "right minor", "left average", "right average"]]
+    values_list = [values[key] for key in ["neck", "down", "up", "left", "right", "left major", "left minor", "right major", "right minor", "left average", "right average", "base", "height", "x", "1/x", "y"]]
 
     worksheet.append([worksheet.max_row, *values_list])
     workbook.save(join(current_folder_path, "measured_values.xlsx"))
