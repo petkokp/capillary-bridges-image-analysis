@@ -205,7 +205,7 @@ def capture_standard():
     label_widget.after(10, lambda: capture_camera(selected_camera_index))
             
 def capture_basler():
-        global is_grabbing, converter, frame, processed_frame, should_process_image
+        global is_grabbing, converter, frame, processed_frame, values, should_process_image
         if not is_grabbing:
             basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             is_grabbing = True
