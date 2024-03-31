@@ -14,8 +14,11 @@ def get_filtered_and_sorted_contours(contours):
     indices = np.argsort(areas)[::-1][:2]
     return [contours[i] for i in indices]
 
-def standard_process(roi, index=None, correct_values=None):
-    brightened_image = brighten(roi)
+def standard_process(roi, index=None, correct_values=None, bright=False):
+    brightened_image = roi
+    
+    if bright:
+        brightened_image = brighten(roi)
 
     standard_imgray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
 
@@ -194,7 +197,7 @@ def standard_process(roi, index=None, correct_values=None):
 
     return img_with_line, results, values
   
-def process_image_basic(img, index=None, correct_values=None):
+def process_image_basic(img, index=None, correct_values=None, bright=False):
     top_crop = 60
     bottom_crop = 70
     left_crop = 60
@@ -202,4 +205,4 @@ def process_image_basic(img, index=None, correct_values=None):
 
     roi = img[top_crop:-bottom_crop, left_crop:-right_crop]
 
-    return standard_process(roi, index, correct_values)
+    return standard_process(roi, index, correct_values, bright)

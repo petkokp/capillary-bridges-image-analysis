@@ -37,6 +37,9 @@ should_process_image = True
 STANDARD_CAMERA = "Standard"
 BASLER_CAMERA = "Basler"
 
+BRIGHTEN = "Brighten"
+STANDARD_BRIGHTNESS = "Standard brightness"
+
 RECORDINGS_FOLDER = "recordings"
 
 base_dir = join(expanduser("~"), "Desktop", "Capillary bridges image analysis")
@@ -88,7 +91,7 @@ def show_cam_frame(frame):
     label_widget.photo_image = img
     label_widget.configure(image=img)
 
-def open_image(MODEL, selected_camera_index: str):
+def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str):
     global running_camera
     if running_camera:
         running_camera = False
@@ -105,7 +108,7 @@ def open_image(MODEL, selected_camera_index: str):
     if file_path:
         image = cv2.imread(file_path)
         
-        processed_image, _, values = process_image_basic(image, 0) # process_image(image, 0, './temp', MODEL)
+        processed_image, _, values = process_image_basic(image, bright=selected_brightness_index == BRIGHTEN) # process_image(image, 0, './temp', MODEL)
         
         update_values_label(values)
 
@@ -152,7 +155,7 @@ def stop_recording(selected_camera_index: str):
         
         running_camera = False
 
-def open_camera(selected_camera_index: str):
+def open_camera(selected_camera_index: str, selected_brightness_index: str):
     global running_camera, standard_camera, basler_camera, is_grabbing, converter, image_count
     is_grabbing = False
     image_count = 0
@@ -166,9 +169,9 @@ def open_camera(selected_camera_index: str):
             standard_camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         elif selected_camera_index == BASLER_CAMERA:
             basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-            basler_camera.ExposureTime.SetValue(basler_camera.ExposureTime.Min)
+            # basler_camera.ExposureTime.SetValue(basler_camera.ExposureTime.Min)
             
-        capture_camera(selected_camera_index)
+        capture_camera(selected_camera_index, selected_brightness_index)
         if not is_recording: save_button.config(state="normal")
         
 def save_frame(frame, processed_frame, values):
@@ -191,7 +194,7 @@ def save_current_frame():
     if frame is not None and processed_frame is not None and values is not None:
         save_frame(frame, processed_frame, values)
 
-def capture_standard():
+def capture_standard(selected_brightness_index: str):
     global frame, processed_frame, values, should_process_image
     _, frame = standard_camera.read()
         
@@ -200,15 +203,15 @@ def capture_standard():
         show_cam_frame(frame)
 
     if frame is not None and not is_recording:
-        processed_frame, _, values = process_image_basic(frame, 0)
+        processed_frame, _, values = process_image_basic(frame, bright=selected_brightness_index == BRIGHTEN)
         
         update_values_label(values)
 
         show_cam_frame(processed_frame if should_process_image else frame)
 
-    label_widget.after(10, lambda: capture_camera(selected_camera_index))
+    label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
             
-def capture_basler():
+def capture_basler(selected_brightness_index: str):
         global is_grabbing, converter, frame, processed_frame, values, should_process_image
         if not is_grabbing:
             basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
@@ -227,23 +230,23 @@ def capture_basler():
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
-                processed_frame, _, values = process_image_basic(frame, 0)
+                processed_frame, _, values = process_image_basic(frame, bright=selected_brightness_index == BRIGHTEN)
                 
                 update_values_label(values)
 
                 show_cam_frame(processed_frame if should_process_image else frame)
 
-            label_widget.after(10, lambda: capture_camera(selected_camera_index))
+            label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
 
         grabResult.Release()
 
-def capture_camera(selected_camera_index: str):
+def capture_camera(selected_camera_index: str, selected_brightness_index: str):
     global is_grabbing
     if running_camera:
         if selected_camera_index == STANDARD_CAMERA:
-            capture_standard()
+            capture_standard(selected_brightness_index)
         elif selected_camera_index == BASLER_CAMERA:
-            capture_basler()
+            capture_basler(selected_brightness_index)
     else:
         if selected_camera_index == STANDARD_CAMERA:
             standard_camera.release()
@@ -278,7 +281,17 @@ camera_options = [
 ]
 selected_camera_index = BASLER_CAMERA 
 
-realtime_button = Button(app, text="Process realtime", command=lambda: open_camera(selected_camera_index))
+def select_brightness(brightness_index):
+    global selected_brightness_index
+    selected_brightness_index = brightness_index
+
+brighten_options = [
+    BRIGHTEN,
+    STANDARD_BRIGHTNESS
+]
+selected_brightness_index = STANDARD_BRIGHTNESS 
+
+realtime_button = Button(app, text="Process realtime", command=lambda: open_camera(selected_camera_index, selected_camera_index))
 realtime_button.pack(side="left", padx=10, pady=10)
 
 save_button = Button(app, text="Save image", command=lambda: save_current_frame(), state="disabled")
@@ -293,7 +306,10 @@ stop_button.pack(side="left", padx=10, pady=10)
 camera_menu = OptionMenu(app, StringVar(app, camera_options[1]), *camera_options, command=lambda index: select_camera(index))
 camera_menu.pack(side="right", padx=10, pady=10)
 
-image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE", selected_camera_index))
+brighten_menu = OptionMenu(app, StringVar(app, brighten_options[1]), *brighten_options, command=lambda index: select_brightness(index))
+brighten_menu.pack(side="right", padx=10, pady=10)
+
+image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE", selected_camera_index, selected_brightness_index))
 image_button_basic.pack(side="right", padx=10, pady=10)
 
 toggle_button = Button(app, text="Toggle processing", command=toggle_processing)
