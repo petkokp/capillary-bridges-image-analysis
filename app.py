@@ -6,6 +6,9 @@ from os import makedirs
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from processing.process_image_basic import process_image_basic
+
+# from processing.process_image import process_image
+
 from pypylon import pylon
 from datetime import datetime
 
@@ -102,7 +105,7 @@ def open_image(MODEL, selected_camera_index: str):
     if file_path:
         image = cv2.imread(file_path)
         
-        processed_image, _, values = process_image_basic(image, 0)
+        processed_image, _, values = process_image_basic(image, 0) # process_image(image, 0, './temp', MODEL)
         
         update_values_label(values)
 
@@ -163,6 +166,7 @@ def open_camera(selected_camera_index: str):
             standard_camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         elif selected_camera_index == BASLER_CAMERA:
             basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+            basler_camera.ExposureTime.SetValue(basler_camera.ExposureTime.Min)
             
         capture_camera(selected_camera_index)
         if not is_recording: save_button.config(state="normal")
@@ -295,7 +299,7 @@ image_button_basic.pack(side="right", padx=10, pady=10)
 toggle_button = Button(app, text="Toggle processing", command=toggle_processing)
 toggle_button.pack(side="right", padx=10, pady=10)
 
-# image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM"))
+# image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM", selected_camera_index))
 # image_button_basic.pack(side="right", padx=10, pady=10)
 
 copy_button = Button(app, text="Copy to Clipboard", command=copy_to_clipboard)

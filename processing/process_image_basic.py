@@ -14,7 +14,7 @@ def get_filtered_and_sorted_contours(contours):
     indices = np.argsort(areas)[::-1][:2]
     return [contours[i] for i in indices]
 
-def standard_process(roi, index, correct_values=None):
+def standard_process(roi, index=None, correct_values=None):
     brightened_image = brighten(roi)
 
     standard_imgray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
@@ -59,7 +59,7 @@ def standard_process(roi, index, correct_values=None):
         'neck': neck_distance,
     }
 
-    if correct_values is not None and neck_distance is not None:
+    if correct_values is not None and neck_distance is not None and index is not None:
         neck_error = calculate_percentage_error(
             neck_distance, correct_values['neck'][index - 1])
         results.append({'Image': index, 'Type': 'Neck',
@@ -174,7 +174,7 @@ def standard_process(roi, index, correct_values=None):
         values['1/x'] = 1 / x
         values['y'] = calculate_y(height, neck_distance)
 
-        if correct_values:
+        if correct_values and index:
             results += collect_results(index, down_distance, up_distance,
                                        left_distance, right_distance, correct_values)
 
@@ -194,7 +194,7 @@ def standard_process(roi, index, correct_values=None):
 
     return img_with_line, results, values
   
-def process_image_basic(img, index, correct_values=None):
+def process_image_basic(img, index=None, correct_values=None):
     top_crop = 60
     bottom_crop = 70
     left_crop = 60
