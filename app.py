@@ -277,7 +277,7 @@ def update_frame_rate(fps):
     if fps is None: return
     
     formatted_fps = f"FPS: {fps}"
-    values_label.config(text=formatted_fps)
+    fps_label.config(text=formatted_fps)
 
 def update_values_label(values):
     if values is None: return
