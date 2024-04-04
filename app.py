@@ -42,6 +42,9 @@ STANDARD_BRIGHTNESS = "Standard brightness"
 
 RECORDINGS_FOLDER = "recordings"
 
+MIN_EXPOSURE_TIME = 59
+MAX_EXPOSURE_TIME = 1000000
+
 base_dir = join(expanduser("~"), "Desktop", "Capillary bridges image analysis")
 current_folder_path = None
 workbook = None
@@ -69,12 +72,6 @@ def create_recordings_folder_structure():
     recordings_folder_exists = exists(RECORDINGS_PATH)
     
     if not recordings_folder_exists: makedirs(RECORDINGS_PATH)
-
-def copy_to_clipboard():
-    values_text = values_label.cget("text")
-    app.clipboard_clear()
-    app.clipboard_append(values_text)
-    app.update()
 
 def show_cam_frame(frame):
     if frame is None: return
@@ -124,6 +121,8 @@ def start_recording(selected_camera_index: str):
     
     stop_button.config(state="normal")
     
+    exposure_entry.config(state="disabled")
+    
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -169,7 +168,8 @@ def open_camera(selected_camera_index: str, selected_brightness_index: str):
             standard_camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         elif selected_camera_index == BASLER_CAMERA:
             basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-            # basler_camera.ExposureTime.SetValue(basler_camera.ExposureTime.Min)
+            exposure_entry.config(state="normal")
+            exposure_entry.insert(0, 5000)
             
         capture_camera(selected_camera_index, selected_brightness_index)
         if not is_recording: save_button.config(state="normal")
@@ -219,6 +219,14 @@ def capture_basler(selected_brightness_index: str):
             converter = pylon.ImageFormatConverter()
             converter.OutputPixelFormat = pylon.PixelType_BGR8packed
             converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
+         
+        exposure_time = None
+        exposure_entry_value = exposure_entry.get()
+        if exposure_entry_value != '': exposure_time = int(exposure_entry_value)   
+        if exposure_time and exposure_time >= MIN_EXPOSURE_TIME and exposure_time <= MAX_EXPOSURE_TIME: basler_camera.ExposureTime.SetValue(exposure_time)
+        
+        fps = basler_camera.ResultingFrameRate.Value
+        update_frame_rate(fps)
         
         grabResult = basler_camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         if grabResult.GrabSucceeded():
@@ -263,6 +271,13 @@ def reset_label():
     label_widget.configure(image=empty_image)
     label_widget.photo_image = empty_image
     save_button.config(state="disabled")
+    exposure_entry.config(state="disabled")
+    
+def update_frame_rate(fps):
+    if fps is None: return
+    
+    formatted_fps = f"FPS: {fps}"
+    values_label.config(text=formatted_fps)
 
 def update_values_label(values):
     if values is None: return
@@ -318,7 +333,18 @@ toggle_button.pack(side="right", padx=10, pady=10)
 # image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM", selected_camera_index))
 # image_button_basic.pack(side="right", padx=10, pady=10)
 
-copy_button = Button(app, text="Copy to Clipboard", command=copy_to_clipboard)
-copy_button.pack(side="bottom", padx=10, pady=10)
+def exposure_validation_callback(P):
+    if str.isdigit(P) or P == "": return True
+    return False
+    
+exposure_validation = (app.register(exposure_validation_callback))
+
+exposure_entry = Entry(app, width=10, validate='all', validatecommand=(exposure_validation, '%P'))
+exposure_entry.pack(side="right", padx=5)
+exposure_entry.config(state="disabled")
+exposure_label = Label(app, text="Exposure time (59 - 1000000 µs):")
+exposure_label.pack(side="right", padx=5)
+fps_label = Label(app, text="FPS: 0")
+fps_label.pack(side="right", padx=5)
 
 app.mainloop()
