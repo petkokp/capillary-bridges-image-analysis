@@ -93,9 +93,9 @@ def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str
     if running_camera:
         running_camera = False
         
-        if selected_camera_index == STANDARD_CAMERA:
+        if selected_camera_index == STANDARD_CAMERA and basler_camera is not None:
             standard_camera.release()
-        elif selected_camera_index == BASLER_CAMERA:
+        elif selected_camera_index == BASLER_CAMERA and basler_camera is not None:
             basler_camera.StopGrabbing()
         
         reset_label()
@@ -147,9 +147,9 @@ def stop_recording(selected_camera_index: str):
     if running_camera:
         reset_label()
         
-        if selected_camera_index == STANDARD_CAMERA:
+        if selected_camera_index == STANDARD_CAMERA and standard_camera is not None:
             standard_camera.release()
-        elif selected_camera_index == BASLER_CAMERA:
+        elif selected_camera_index == BASLER_CAMERA and basler_camera is not None:
             basler_camera.StopGrabbing()
         
         running_camera = False
@@ -167,9 +167,14 @@ def open_camera(selected_camera_index: str, selected_brightness_index: str):
         if selected_camera_index == STANDARD_CAMERA:
             standard_camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         elif selected_camera_index == BASLER_CAMERA:
-            basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-            exposure_entry.config(state="normal")
-            exposure_entry.insert(0, 5000)
+            try:
+                basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+                exposure_entry.config(state="normal")
+                exposure_entry.insert(0, 5000)
+            except:
+                update_error_message("Basler camera is not found. Try reconnecting it or switch the camera.")
+                running_camera = False
+                return
             
         capture_camera(selected_camera_index, selected_brightness_index)
         if not is_recording: save_button.config(state="normal")
@@ -256,9 +261,9 @@ def capture_camera(selected_camera_index: str, selected_brightness_index: str):
         elif selected_camera_index == BASLER_CAMERA:
             capture_basler(selected_brightness_index)
     else:
-        if selected_camera_index == STANDARD_CAMERA:
+        if selected_camera_index == STANDARD_CAMERA and standard_camera is not None:
             standard_camera.release()
-        elif selected_camera_index == BASLER_CAMERA:
+        elif selected_camera_index == BASLER_CAMERA and basler_camera is not None:
             basler_camera.StopGrabbing()
             is_grabbing = False
         reset_label()
@@ -278,13 +283,16 @@ def update_frame_rate(fps):
     
     formatted_fps = f"FPS: {fps}"
     fps_label.config(text=formatted_fps)
+    
+def update_error_message(error):
+    values_label.config(text=error, font=("Helvetica", 12))
 
 def update_values_label(values):
     if values is None: return
 
     formatted_values = {key.capitalize(): f'{value:.2f} um' for key, value in values.items()}
     values_text = ", ".join([f"{key}: {value}" for key, value in formatted_values.items()])
-    values_label.config(text=values_text)
+    values_label.config(text=values_text, font=("Helvetica", 10))
     
 def select_camera(camera_index):
     global selected_camera_index
