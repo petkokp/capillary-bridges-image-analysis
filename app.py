@@ -6,6 +6,9 @@ from os import makedirs
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from processing.process_image_basic import process_image_basic
+
+# from processing.process_image import process_image
+
 from pypylon import pylon
 from datetime import datetime
 
@@ -23,7 +26,7 @@ empty_image = ImageTk.PhotoImage(Image.new("RGB", (width, height), "white"))
 label_widget.configure(image=empty_image)
 label_widget.photo_image = empty_image
 
-values_label = Label(app, text="", font=("Helvetica", 10))
+values_label = Label(app, text="", font=("Helvetica", 10), wraplength=1200, anchor='w')
 values_label.pack(pady=10)
 
 running_camera = False
@@ -34,7 +37,13 @@ should_process_image = True
 STANDARD_CAMERA = "Standard"
 BASLER_CAMERA = "Basler"
 
+BRIGHTEN = "Brighten"
+STANDARD_BRIGHTNESS = "Standard brightness"
+
 RECORDINGS_FOLDER = "recordings"
+
+MIN_EXPOSURE_TIME = 59
+MAX_EXPOSURE_TIME = 1000000
 
 base_dir = join(expanduser("~"), "Desktop", "Capillary bridges image analysis")
 current_folder_path = None
@@ -64,12 +73,6 @@ def create_recordings_folder_structure():
     
     if not recordings_folder_exists: makedirs(RECORDINGS_PATH)
 
-def copy_to_clipboard():
-    values_text = values_label.cget("text")
-    app.clipboard_clear()
-    app.clipboard_append(values_text)
-    app.update()
-
 def show_cam_frame(frame):
     if frame is None: return
     
@@ -85,14 +88,14 @@ def show_cam_frame(frame):
     label_widget.photo_image = img
     label_widget.configure(image=img)
 
-def open_image(MODEL, selected_camera_index: str):
+def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str):
     global running_camera
     if running_camera:
         running_camera = False
         
-        if selected_camera_index == STANDARD_CAMERA:
+        if selected_camera_index == STANDARD_CAMERA and basler_camera is not None:
             standard_camera.release()
-        elif selected_camera_index == BASLER_CAMERA:
+        elif selected_camera_index == BASLER_CAMERA and basler_camera is not None:
             basler_camera.StopGrabbing()
         
         reset_label()
@@ -102,7 +105,7 @@ def open_image(MODEL, selected_camera_index: str):
     if file_path:
         image = cv2.imread(file_path)
         
-        processed_image, _, values = process_image_basic(image, 0)
+        processed_image, _, values = process_image_basic(image, bright=selected_brightness_index == BRIGHTEN) # process_image(image, 0, './temp', MODEL)
         
         update_values_label(values)
 
@@ -117,6 +120,8 @@ def start_recording(selected_camera_index: str):
     save_button.config(state="disabled")
     
     stop_button.config(state="normal")
+    
+    exposure_entry.config(state="disabled")
     
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     
@@ -142,14 +147,14 @@ def stop_recording(selected_camera_index: str):
     if running_camera:
         reset_label()
         
-        if selected_camera_index == STANDARD_CAMERA:
+        if selected_camera_index == STANDARD_CAMERA and standard_camera is not None:
             standard_camera.release()
-        elif selected_camera_index == BASLER_CAMERA:
+        elif selected_camera_index == BASLER_CAMERA and basler_camera is not None:
             basler_camera.StopGrabbing()
         
         running_camera = False
 
-def open_camera(selected_camera_index: str):
+def open_camera(selected_camera_index: str, selected_brightness_index: str):
     global running_camera, standard_camera, basler_camera, is_grabbing, converter, image_count
     is_grabbing = False
     image_count = 0
@@ -162,9 +167,16 @@ def open_camera(selected_camera_index: str):
         if selected_camera_index == STANDARD_CAMERA:
             standard_camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         elif selected_camera_index == BASLER_CAMERA:
-            basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+            try:
+                basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+                exposure_entry.config(state="normal")
+                exposure_entry.insert(0, 5000)
+            except:
+                update_error_message("Basler camera is not found. Try reconnecting it or switch the camera.")
+                running_camera = False
+                return
             
-        capture_camera(selected_camera_index)
+        capture_camera(selected_camera_index, selected_brightness_index)
         if not is_recording: save_button.config(state="normal")
         
 def save_frame(frame, processed_frame, values):
@@ -187,7 +199,7 @@ def save_current_frame():
     if frame is not None and processed_frame is not None and values is not None:
         save_frame(frame, processed_frame, values)
 
-def capture_standard():
+def capture_standard(selected_brightness_index: str):
     global frame, processed_frame, values, should_process_image
     _, frame = standard_camera.read()
         
@@ -196,22 +208,30 @@ def capture_standard():
         show_cam_frame(frame)
 
     if frame is not None and not is_recording:
-        processed_frame, _, values = process_image_basic(frame, 0)
+        processed_frame, _, values = process_image_basic(frame, bright=selected_brightness_index == BRIGHTEN)
         
         update_values_label(values)
 
         show_cam_frame(processed_frame if should_process_image else frame)
 
-    label_widget.after(10, lambda: capture_camera(selected_camera_index))
+    label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
             
-def capture_basler():
-        global is_grabbing, converter, frame, processed_frame, should_process_image
+def capture_basler(selected_brightness_index: str):
+        global is_grabbing, converter, frame, processed_frame, values, should_process_image
         if not is_grabbing:
             basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             is_grabbing = True
             converter = pylon.ImageFormatConverter()
             converter.OutputPixelFormat = pylon.PixelType_BGR8packed
             converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
+         
+        exposure_time = None
+        exposure_entry_value = exposure_entry.get()
+        if exposure_entry_value != '': exposure_time = int(exposure_entry_value)   
+        if exposure_time and exposure_time >= MIN_EXPOSURE_TIME and exposure_time <= MAX_EXPOSURE_TIME: basler_camera.ExposureTime.SetValue(exposure_time)
+        
+        fps = basler_camera.ResultingFrameRate.Value
+        update_frame_rate(fps)
         
         grabResult = basler_camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         if grabResult.GrabSucceeded():
@@ -223,27 +243,27 @@ def capture_basler():
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
-                processed_frame, _, values = process_image_basic(frame, 0)
+                processed_frame, _, values = process_image_basic(frame, bright=selected_brightness_index == BRIGHTEN)
                 
                 update_values_label(values)
 
                 show_cam_frame(processed_frame if should_process_image else frame)
 
-            label_widget.after(10, lambda: capture_camera(selected_camera_index))
+            label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
 
         grabResult.Release()
 
-def capture_camera(selected_camera_index: str):
+def capture_camera(selected_camera_index: str, selected_brightness_index: str):
     global is_grabbing
     if running_camera:
         if selected_camera_index == STANDARD_CAMERA:
-            capture_standard()
+            capture_standard(selected_brightness_index)
         elif selected_camera_index == BASLER_CAMERA:
-            capture_basler()
+            capture_basler(selected_brightness_index)
     else:
-        if selected_camera_index == STANDARD_CAMERA:
+        if selected_camera_index == STANDARD_CAMERA and standard_camera is not None:
             standard_camera.release()
-        elif selected_camera_index == BASLER_CAMERA:
+        elif selected_camera_index == BASLER_CAMERA and basler_camera is not None:
             basler_camera.StopGrabbing()
             is_grabbing = False
         reset_label()
@@ -256,13 +276,23 @@ def reset_label():
     label_widget.configure(image=empty_image)
     label_widget.photo_image = empty_image
     save_button.config(state="disabled")
+    exposure_entry.config(state="disabled")
+    
+def update_frame_rate(fps):
+    if fps is None: return
+    
+    formatted_fps = f"FPS: {fps}"
+    fps_label.config(text=formatted_fps)
+    
+def update_error_message(error):
+    values_label.config(text=error, font=("Helvetica", 12))
 
 def update_values_label(values):
     if values is None: return
 
     formatted_values = {key.capitalize(): f'{value:.2f} um' for key, value in values.items()}
     values_text = ", ".join([f"{key}: {value}" for key, value in formatted_values.items()])
-    values_label.config(text=values_text)
+    values_label.config(text=values_text, font=("Helvetica", 10))
     
 def select_camera(camera_index):
     global selected_camera_index
@@ -274,7 +304,17 @@ camera_options = [
 ]
 selected_camera_index = BASLER_CAMERA 
 
-realtime_button = Button(app, text="Process realtime", command=lambda: open_camera(selected_camera_index))
+def select_brightness(brightness_index):
+    global selected_brightness_index
+    selected_brightness_index = brightness_index
+
+brighten_options = [
+    BRIGHTEN,
+    STANDARD_BRIGHTNESS
+]
+selected_brightness_index = STANDARD_BRIGHTNESS 
+
+realtime_button = Button(app, text="Process realtime", command=lambda: open_camera(selected_camera_index, selected_camera_index))
 realtime_button.pack(side="left", padx=10, pady=10)
 
 save_button = Button(app, text="Save image", command=lambda: save_current_frame(), state="disabled")
@@ -289,16 +329,30 @@ stop_button.pack(side="left", padx=10, pady=10)
 camera_menu = OptionMenu(app, StringVar(app, camera_options[1]), *camera_options, command=lambda index: select_camera(index))
 camera_menu.pack(side="right", padx=10, pady=10)
 
-image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE", selected_camera_index))
+brighten_menu = OptionMenu(app, StringVar(app, brighten_options[1]), *brighten_options, command=lambda index: select_brightness(index))
+brighten_menu.pack(side="right", padx=10, pady=10)
+
+image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE", selected_camera_index, selected_brightness_index))
 image_button_basic.pack(side="right", padx=10, pady=10)
 
 toggle_button = Button(app, text="Toggle processing", command=toggle_processing)
 toggle_button.pack(side="right", padx=10, pady=10)
 
-# image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM"))
+# image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM", selected_camera_index))
 # image_button_basic.pack(side="right", padx=10, pady=10)
 
-copy_button = Button(app, text="Copy to Clipboard", command=copy_to_clipboard)
-copy_button.pack(side="bottom", padx=10, pady=10)
+def exposure_validation_callback(P):
+    if str.isdigit(P) or P == "": return True
+    return False
+    
+exposure_validation = (app.register(exposure_validation_callback))
+
+exposure_entry = Entry(app, width=10, validate='all', validatecommand=(exposure_validation, '%P'))
+exposure_entry.pack(side="right", padx=5)
+exposure_entry.config(state="disabled")
+exposure_label = Label(app, text="Exposure time (59 - 1000000 µs):")
+exposure_label.pack(side="right", padx=5)
+fps_label = Label(app, text="FPS: 0")
+fps_label.pack(side="right", padx=5)
 
 app.mainloop()
