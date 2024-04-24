@@ -122,6 +122,8 @@ def start_recording(selected_camera_index: str):
     stop_button.config(state="normal")
     
     exposure_entry.config(state="disabled")
+
+    fps_entry.config(state="disabled")
     
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     
@@ -170,7 +172,11 @@ def open_camera(selected_camera_index: str, selected_brightness_index: str):
             try:
                 basler_camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
                 exposure_entry.config(state="normal")
-                exposure_entry.insert(0, 5000)
+                exposure_entry_value = exposure_entry.get()
+                if not exposure_entry_value: exposure_entry.insert(0, 5000)
+                fps_entry.config(state="normal")
+                fps_entry_value = fps_entry.get()
+                if not fps_entry_value: fps_entry.insert(0, 60)
             except:
                 update_error_message("Basler camera is not found. Try reconnecting it or switch the camera.")
                 running_camera = False
@@ -224,14 +230,22 @@ def capture_basler(selected_brightness_index: str):
             converter = pylon.ImageFormatConverter()
             converter.OutputPixelFormat = pylon.PixelType_BGR8packed
             converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
+
+        fps_value = None
+        fps_entry_value = fps_entry.get()
+        if fps_entry_value != '': fps_value = round(float(fps_entry_value), 2)   
+        if fps_value:
+            basler_camera.AcquisitionFrameRateEnable.Value = True
+            basler_camera.AcquisitionFrameRate.Value = fps_value
          
         exposure_time = None
         exposure_entry_value = exposure_entry.get()
         if exposure_entry_value != '': exposure_time = int(exposure_entry_value)   
         if exposure_time and exposure_time >= MIN_EXPOSURE_TIME and exposure_time <= MAX_EXPOSURE_TIME: basler_camera.ExposureTime.SetValue(exposure_time)
-        
-        fps = basler_camera.ResultingFrameRate.Value
-        update_frame_rate(fps)
+
+        if not fps_entry_value: # TODO - sync with exposure time
+            fps = basler_camera.ResultingFrameRate.Value
+            update_frame_rate(fps)
         
         grabResult = basler_camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         if grabResult.GrabSucceeded():
@@ -352,7 +366,12 @@ exposure_entry.pack(side="right", padx=5)
 exposure_entry.config(state="disabled")
 exposure_label = Label(app, text="Exposure time (59 - 1000000 µs):")
 exposure_label.pack(side="right", padx=5)
-fps_label = Label(app, text="FPS: 0")
+
+fps_entry = Entry(app, width=10, validate='all')
+fps_entry.pack(side="right", padx=5)
+fps_entry.config(state="disabled")
+fps_label = Label(app, text="FPS:")
 fps_label.pack(side="right", padx=5)
+
 
 app.mainloop()
