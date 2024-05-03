@@ -169,3 +169,13 @@ cython_debug/
 NAIVE_values.json
 SAM_values.json
 /test_results
+
+# last
+
+Lastdata
+pics
+a.ipynb
+sam*
+dataset/images
+dataset/masks
+annotations.json
