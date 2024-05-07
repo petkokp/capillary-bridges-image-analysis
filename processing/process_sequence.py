@@ -1,5 +1,6 @@
 import cv2
 from .process_image import process_image
+from .process_image_basic import process_image_basic
 from utilities.extract_sequence_name_from_path import extract_sequence_name_from_path
 
 def process_sequence(path, correct_values, model):
@@ -9,7 +10,7 @@ def process_sequence(path, correct_values, model):
 
     for i, img in enumerate(imgs):
         print(f'Image {i}/{len(imgs) - 1}\n')
-        img_with_line, results, _ = process_image(imgs[i], i + 1, extract_sequence_name_from_path(path), model, correct_values)
+        img_with_line, results, _ = process_image_basic(imgs[i], correct_values=correct_values, index=i + 1) # process_image(imgs[i], i + 1, extract_sequence_name_from_path(path), model, correct_values)
         
         if img_with_line is not None and results is not None:
             temp = []
