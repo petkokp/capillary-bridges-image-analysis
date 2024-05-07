@@ -5,16 +5,14 @@ import cv2
 
 import numpy as np
 
-def save_output(masks, output_path):
-     sorted_result = sorted(masks, key=(lambda x: x['area']), reverse=True)
-     # Plot for each segment area
-     for val in sorted_result:
-        mask = val['segmentation']
-        img = np.ones((mask.shape[0], mask.shape[1], 3))
-        color_mask = np.random.random((1, 3)).tolist()[0]
-        for i in range(3):
-            img[:,:,i] = color_mask[i]
-            cv2.imwrite(output_path, np.dstack((img, mask*0.5)))
+def save_output(mask, output_path, random_color=False):
+    if random_color:
+        color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
+    else:
+        color = np.array([30/255, 144/255, 255/255, 0.6])
+    h, w = mask.shape[-2:]
+    mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
+    cv2.imwrite(output_path, mask_image)
 
 def mobile_sam(image, output_path):
   model_type = "vit_t"
@@ -40,4 +38,4 @@ def mobile_sam(image, output_path):
       multimask_output=False,
   )
   
-  save_output(masks, output_path)
+  save_output(masks[0], output_path)

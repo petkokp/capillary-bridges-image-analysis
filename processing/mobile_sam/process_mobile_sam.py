@@ -9,9 +9,9 @@ def process_mobile_sam(save_path, index, roi):
   
   cv2.imwrite(PATH, roi)
   
-  create_dir(f'sam_results/{save_path}')
+  create_dir(f'mobile_sam_results/{save_path}')
   
-  SAM_PATH = f'./sam_results/{save_path}/{index}.png'
+  SAM_PATH = f'./mobile_sam_results/{save_path}/{index}.png'
   
   mobile_sam(roi, SAM_PATH)
   

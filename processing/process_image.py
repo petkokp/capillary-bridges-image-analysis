@@ -9,19 +9,22 @@ from utilities.calculate_farthest_points import calculate_farthest_points
 from utilities.models import Models
 from .brighten import brighten
 from .process_sam import process_sam
-from mobile_sam.process_mobile_sam import process_mobile_sam
+from processing.mobile_sam.process_mobile_sam import process_mobile_sam
+from utilities.construct_ellipse_from_contour import construct_ellipse_from_contour
+from utilities.calculations import calculate_base, calculate_height, calculate_x, calculate_y
 
 rng.seed(12345)
-
 
 def get_filtered_and_sorted_contours(contours):
     areas = [cv2.contourArea(c) for c in contours]
     indices = np.argsort(areas)[::-1][:2]
     return [contours[i] for i in indices]
 
-
-def standard_process(roi, index, correct_values=None):
-    brightened_image = brighten(roi)
+def measure(roi, index=None, correct_values=None, bright=False):
+    brightened_image = roi
+    
+    if bright:
+        brightened_image = brighten(roi)
 
     standard_imgray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
 
@@ -51,6 +54,7 @@ def standard_process(roi, index, correct_values=None):
 
     if len(standard_filtered_contours) >= 2:
         standard_contour1 = np.vstack(standard_filtered_contours[0])
+                
         standard_contour2 = np.vstack(standard_filtered_contours[1])
     else:
         return None, None, None
@@ -64,7 +68,7 @@ def standard_process(roi, index, correct_values=None):
         'neck': neck_distance,
     }
 
-    if correct_values is not None and neck_distance is not None:
+    if correct_values is not None and neck_distance is not None and index is not None:
         neck_error = calculate_percentage_error(
             neck_distance, correct_values['neck'][index - 1])
         results.append({'Image': index, 'Type': 'Neck',
@@ -97,6 +101,36 @@ def standard_process(roi, index, correct_values=None):
             contour1_farthest_points[0]), np.array(contour1_farthest_points[1])
         contour2_start, contour2_end = np.array(
             contour2_farthest_points[0]), np.array(contour2_farthest_points[1])
+        
+        brightened_contours = [brightened_contour1, brightened_contour2]
+        
+        bounding_boxes = [cv2.boundingRect(contour) for contour in brightened_contours]
+
+        leftmost_index = 0 if bounding_boxes[0][0] < bounding_boxes[1][0] else 1
+        rightmost_index = 1 - leftmost_index
+
+        left_contour = brightened_contours[leftmost_index]
+        right_contour = brightened_contours[rightmost_index]
+        
+        left_start_point = []
+        left_end_point = []
+        right_start_point = []
+        right_end_point = []
+        
+        if left_contour is brightened_contour1:
+            left_start_point = contour1_start
+            left_end_point = contour1_end
+            right_start_point = contour2_start
+            right_end_point = contour2_end
+        else:
+            left_start_point = contour2_start
+            left_end_point = contour2_end
+            right_start_point = contour1_start
+            right_end_point = contour1_end
+        
+        left_major_axis, left_minor_axis = construct_ellipse_from_contour(img_with_line, left_contour, left_start_point, left_end_point)
+        
+        right_major_axis, right_minor_axis = construct_ellipse_from_contour(img_with_line, right_contour, right_start_point, right_end_point, is_right=True)
 
         if contour1_start[1] < contour1_end[1]:
             contour1_start, contour1_end = contour1_end, contour1_start
@@ -104,6 +138,28 @@ def standard_process(roi, index, correct_values=None):
         if contour2_start[1] < contour2_end[1]:
             contour2_start, contour2_end = contour2_end, contour2_start
 
+        if left_major_axis and left_minor_axis:
+            left_major_distance = pixels_to_micrometers(
+                np.sqrt((left_major_axis[0][0] - left_major_axis[1][0]) ** 2 + (left_major_axis[0][1] - left_major_axis[1][1]) ** 2))
+
+            left_minor_distance = pixels_to_micrometers(
+                np.sqrt((left_minor_axis[0][0] - left_minor_axis[1][0]) ** 2 + (left_minor_axis[0][1] - left_minor_axis[1][1]) ** 2))
+            
+            values['left major'] = left_major_distance
+            values['left minor'] = left_minor_distance
+            values['left average'] = (left_major_distance + left_minor_distance) / 2
+            
+        if right_major_axis and right_minor_axis:
+            right_major_distance = pixels_to_micrometers(
+                np.sqrt((right_major_axis[0][0] - right_major_axis[1][0]) ** 2 + (right_major_axis[0][1] - right_major_axis[1][1]) ** 2))
+
+            right_minor_distance = pixels_to_micrometers(
+                np.sqrt((right_minor_axis[0][0] - right_minor_axis[1][0]) ** 2 + (right_minor_axis[0][1] - right_minor_axis[1][1]) ** 2))
+            
+            values['right major'] = right_major_distance
+            values['right minor'] = right_minor_distance
+            values['right average'] = (right_major_distance + right_minor_distance) / 2
+            
         down_distance = pixels_to_micrometers(
             np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))
         up_distance = pixels_to_micrometers(
@@ -117,8 +173,17 @@ def standard_process(roi, index, correct_values=None):
         values['up'] = up_distance
         values['left'] = left_distance
         values['right'] = right_distance
+        
+        base = calculate_base(up_distance, down_distance)
+        values['base'] = base
+        height = calculate_height(left_distance, right_distance)
+        values['height'] = height
+        x = calculate_x(base, neck_distance)
+        values['x'] = x
+        values['1/x'] = 1 / x
+        values['y'] = calculate_y(height, neck_distance)
 
-        if correct_values:
+        if correct_values and index:
             results += collect_results(index, down_distance, up_distance,
                                        left_distance, right_distance, correct_values)
 
@@ -138,125 +203,19 @@ def standard_process(roi, index, correct_values=None):
 
     return img_with_line, results, values
 
-
-def sam_process(img, index, save_path, correct_values=None):
-    brightened_image = process_sam(save_path, index, img)
-
-    brightened_imgray = cv2.cvtColor(brightened_image, cv2.COLOR_BGR2GRAY)
-
-    _, brightened_thresh = cv2.threshold(
-        brightened_imgray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
-    brightened_contours, _ = cv2.findContours(
-        brightened_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    img_with_line = img.copy()
-
-    if (len(brightened_contours) < 2):
-        # cv2.drawContours(img_with_line, brightened_contours, -1, (0, 255, 0), 3)
-        # create_dir(f'broken/{save_path}')
-        # plt.imsave(f'./broken/{save_path}/{index}.png', img_with_line)
-        print('Less than 2 contours found')
-        return None, None, None
-
-    brightened_filtered_contours = get_filtered_and_sorted_contours(
-        brightened_contours)
-
-    brightened_contour1 = np.vstack(brightened_filtered_contours[0])
-    brightened_contour2 = np.vstack(brightened_filtered_contours[1])
-
-    neck_distance, left_contour_rightmost_point, right_contour_leftmost_point = calculate_neck_properties(
-        brightened_contour1, brightened_contour2)
-
-    values = {
-        'neck': neck_distance,
-    }
-
-    results = []
-
-    if correct_values is not None:
-        neck_error = calculate_percentage_error(
-            neck_distance, correct_values['neck'][index - 1])
-        results.append({'Image': index, 'Type': 'Neck',
-                       'Error': f'{neck_distance} µm, {neck_error} % error'})
-
-    hull1 = cv2.convexHull(brightened_contour1, returnPoints=False)
-
-    hull1[::-1].sort(axis=0)
-
-    hull2 = cv2.convexHull(brightened_contour2, returnPoints=False)
-
-    hull2[::-1].sort(axis=0)
-
-    cv2.drawContours(
-        img_with_line, brightened_filtered_contours, -1, (0, 255, 0), 3)
-
-    defects1 = cv2.convexityDefects(brightened_contour1, hull1)
-    defects2 = cv2.convexityDefects(brightened_contour2, hull2)
-
-    contour1_farthest_points = calculate_farthest_points(
-        defects1, brightened_contour1)
-    contour2_farthest_points = calculate_farthest_points(
-        defects2, brightened_contour2)
-
-    contour1_start, contour1_end = np.array(
-        contour1_farthest_points[0]), np.array(contour1_farthest_points[1])
-    contour2_start, contour2_end = np.array(
-        contour2_farthest_points[0]), np.array(contour2_farthest_points[1])
-
-    if contour1_start[1] < contour1_end[1]:
-        contour1_start, contour1_end = contour1_end, contour1_start
-
-    if contour2_start[1] < contour2_end[1]:
-        contour2_start, contour2_end = contour2_end, contour2_start
-
-    down_distance = pixels_to_micrometers(
-        np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))
-    up_distance = pixels_to_micrometers(
-        np.sqrt(np.sum((contour1_start - contour2_start) ** 2)))
-    left_distance = pixels_to_micrometers(
-        np.sqrt(np.sum((contour1_start - contour1_end) ** 2)))
-    right_distance = pixels_to_micrometers(
-        np.sqrt(np.sum((contour2_start - contour2_end) ** 2)))
-
-    values['down'] = down_distance
-    values['up'] = up_distance
-    values['left'] = left_distance
-    values['right'] = right_distance
-
-    if correct_values:
-        results += collect_results(index, down_distance, up_distance,
-                                   left_distance, right_distance, correct_values)
-
-    cv2.line(img_with_line, contour1_start, contour2_start, (255, 0, 0), 2)
-
-    cv2.line(img_with_line, contour1_end, contour2_end, (255, 0, 0), 2)
-
-    cv2.line(img_with_line, contour1_start, contour1_end, (255, 0, 0), 2)
-
-    cv2.line(img_with_line, contour2_start, contour2_end, (255, 0, 0), 2)
-
-    cv2.line(img_with_line, left_contour_rightmost_point,
-             right_contour_leftmost_point, (0, 0, 255), 2)
-
-    return img_with_line, results, values
-
-def mobile_sam_process(img, index, save_path, correct_values=None):
-    brightened_image = process_sam(save_path, index, img)
-    
-    return None, None, None
-
-def process_image(img, index, save_path, model=Models.SAM, correct_values=None):
+def process_image(img, index, save_path, model=Models.SAM, correct_values=None, bright=False):
     top_crop = 60
     bottom_crop = 70
     left_crop = 60
     right_crop = 60
 
     roi = img[top_crop:-bottom_crop, left_crop:-right_crop]
+    
+    image = roi
 
     if model == Models.SAM:
-        return sam_process(roi, index, save_path, correct_values)
+        image = process_sam(save_path, index, roi)
     elif model == Models.MOBILE_SAM:
-        return mobile_sam_process()
+        image = process_mobile_sam(save_path, index, roi)
 
-    return standard_process(roi, index, correct_values)
+    return measure(image, index, correct_values, bright)

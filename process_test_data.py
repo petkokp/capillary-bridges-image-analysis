@@ -27,7 +27,7 @@ INDEX_TO_SEQUENCE = {
     6: 'new_basler_camera'
 }
 
-with open(f"{MODEL}_values.json", "w") as f:
+with open(f"{MODEL.value}_values.json", "w") as f:
     json.dump(sequences_results, f)
 
 visualize_test_results(sequences_results, INDEX_TO_SEQUENCE)
