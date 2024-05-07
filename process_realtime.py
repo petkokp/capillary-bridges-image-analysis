@@ -3,7 +3,7 @@ import time
 from processing.process_image import process_image
 from utilities.create_dir import create_dir
 
-MODEL = "NAIVE" # "SAM"
+MODEL = "NAIVE"
 
 def process_realtime(CAM_INDEX):
   count = 0

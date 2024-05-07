@@ -6,8 +6,10 @@ from utilities.calculate_neck_properties import calculate_neck_properties
 from utilities.collect_results import collect_results
 from utilities.pixels_to_micrometers import pixels_to_micrometers
 from utilities.calculate_farthest_points import calculate_farthest_points
+from utilities.models import Models
 from .brighten import brighten
 from .process_sam import process_sam
+from mobile_sam.process_mobile_sam import process_mobile_sam
 
 rng.seed(12345)
 
@@ -239,8 +241,12 @@ def sam_process(img, index, save_path, correct_values=None):
 
     return img_with_line, results, values
 
+def mobile_sam_process(img, index, save_path, correct_values=None):
+    brightened_image = process_sam(save_path, index, img)
+    
+    return None, None, None
 
-def process_image(img, index, save_path, model="SAM", correct_values=None):
+def process_image(img, index, save_path, model=Models.SAM, correct_values=None):
     top_crop = 60
     bottom_crop = 70
     left_crop = 60
@@ -248,7 +254,9 @@ def process_image(img, index, save_path, model="SAM", correct_values=None):
 
     roi = img[top_crop:-bottom_crop, left_crop:-right_crop]
 
-    if model == "SAM":
+    if model == Models.SAM:
         return sam_process(roi, index, save_path, correct_values)
+    elif model == Models.MOBILE_SAM:
+        return mobile_sam_process()
 
     return standard_process(roi, index, correct_values)

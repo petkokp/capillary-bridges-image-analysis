@@ -165,7 +165,12 @@ cython_debug/
 /images
 /sam_results
 /sam_final_results
+
+/mobile_sam_results
+/mobile_sam_final_results
+
 /standard_final_results
 NAIVE_values.json
 SAM_values.json
+MOBILE_SAM_values.json
 /test_results

@@ -5,14 +5,15 @@ from utilities.visualize_test_results import visualize_test_results
 from utilities.create_dir import create_dir
 from utilities.compare_models import compare_models
 from processing.process_test_data import process_test_data
+from utilities.models import Models
 
-MODEL = "SAM"
+MODEL = Models.MOBILE_SAM # "SAM" "NAIVE"
 
 arg = ""
 
-if len(sys.argv) > 1: arg = sys.argv[1] 
+if len(sys.argv) > 1: arg = sys.argv[1]
 
-if arg == "NAIVE" or arg == "SAM": MODEL = arg
+if arg == Models.NAIVE or arg == Models.SAM or arg == Models.MOBILE_SAM: MODEL = arg
 
 sequences_results, all_processed_images = process_test_data(MODEL)
 
@@ -36,8 +37,15 @@ compare_models()
 for i, image_sequence in enumerate(all_processed_images):
     SEQ = INDEX_TO_SEQUENCE[i]
     
-    SAVE_PATH = f'./sam_final_results/{SEQ}' if MODEL == "SAM" else f'./standard_final_results/{SEQ}'
+    SAVE_PATH = ""
     
+    if MODEL == Models.MOBILE_SAM:
+        SAVE_PATH = f'./sam_final_results/{SEQ}'
+    elif MODEL == Models.NAIVE:
+        SAVE_PATH = f'./standard_final_results/{SEQ}'
+    elif MODEL == Models.MOBILE_SAM:
+        SAVE_PATH = f'./mobile_sam_final_results/{SEQ}'
+        
     create_dir(SAVE_PATH)
 
     for j, image in enumerate(image_sequence):

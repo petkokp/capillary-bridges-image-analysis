@@ -6,7 +6,7 @@ from os import makedirs
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from processing.process_image_basic import process_image_basic
-
+from utilities.models import Models
 # from processing.process_image import process_image
 
 from pypylon import pylon
@@ -332,13 +332,13 @@ camera_menu.pack(side="right", padx=10, pady=10)
 brighten_menu = OptionMenu(app, StringVar(app, brighten_options[1]), *brighten_options, command=lambda index: select_brightness(index))
 brighten_menu.pack(side="right", padx=10, pady=10)
 
-image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image("NAIVE", selected_camera_index, selected_brightness_index))
+image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image(Models.NAIVE, selected_camera_index, selected_brightness_index))
 image_button_basic.pack(side="right", padx=10, pady=10)
 
 toggle_button = Button(app, text="Toggle processing", command=toggle_processing)
 toggle_button.pack(side="right", padx=10, pady=10)
 
-# image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image("SAM", selected_camera_index))
+# image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image(Models.SAM, selected_camera_index))
 # image_button_basic.pack(side="right", padx=10, pady=10)
 
 def exposure_validation_callback(P):
