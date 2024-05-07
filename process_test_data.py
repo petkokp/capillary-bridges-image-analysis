@@ -6,9 +6,11 @@ from utilities.create_dir import create_dir
 from utilities.compare_models import compare_models
 from processing.process_test_data import process_test_data
 
-MODEL = "SAM" # "NAIVE"
+MODEL = "SAM"
 
-arg = sys.argv[1]
+arg = ""
+
+if len(sys.argv) > 1: arg = sys.argv[1] 
 
 if arg == "NAIVE" or arg == "SAM": MODEL = arg
 
@@ -21,6 +23,7 @@ INDEX_TO_SEQUENCE = {
     3: '5%',
     4: '3%',
     5: '0%',
+    6: 'new_basler_camera'
 }
 
 with open(f"{MODEL}_values.json", "w") as f:
