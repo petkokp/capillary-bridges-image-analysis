@@ -64,7 +64,7 @@ def compare_models():
     return
   
   try:
-    mobile_sam = read_json('SAM_FINETUNE_values.json')
+    sam_finetune = read_json('SAM_FINETUNE_values.json')
   except:
     print('Could not compare models. Error with MOBILE_SAM_values.json')
     return
@@ -72,7 +72,8 @@ def compare_models():
   experiment_data = [
       naive,
       sam,
-      mobile_sam
+      mobile_sam,
+      sam_finetune
   ]
 
   average_errors_per_experiment = compare_experiment_errors(experiment_data)
