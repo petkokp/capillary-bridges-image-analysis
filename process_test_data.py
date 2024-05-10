@@ -7,7 +7,7 @@ from utilities.compare_models import compare_models
 from processing.process_test_data import process_test_data
 from utilities.models import Models
 
-MODEL = Models.NAIVE #Models.MOBILE_SAM # "SAM" "NAIVE"
+MODEL = Models.SAM_FINETUNE #Models.MOBILE_SAM # "SAM" "NAIVE" # "SAM_FINETUNE"
 
 arg = ""
 
@@ -45,6 +45,8 @@ for i, image_sequence in enumerate(all_processed_images):
         SAVE_PATH = f'./standard_final_results/{SEQ}'
     elif MODEL == Models.MOBILE_SAM:
         SAVE_PATH = f'./mobile_sam_final_results/{SEQ}'
+    elif MODEL == Models.SAM_FINETUNE:
+        SAVE_PATH = f'./sam_finetune_final_results/{SEQ}'
         
     create_dir(SAVE_PATH)
 

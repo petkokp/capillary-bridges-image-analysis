@@ -41,6 +41,7 @@ INDEX_TO_MODEL = {
     0: Models.NAIVE,
     1: Models.SAM,
     2: Models.MOBILE_SAM,
+    3: Models.SAM_FINETUNE,
 }
 
 def compare_models():
@@ -58,6 +59,12 @@ def compare_models():
   
   try:
     mobile_sam = read_json('MOBILE_SAM_values.json')
+  except:
+    print('Could not compare models. Error with MOBILE_SAM_values.json')
+    return
+  
+  try:
+    mobile_sam = read_json('SAM_FINETUNE_values.json')
   except:
     print('Could not compare models. Error with MOBILE_SAM_values.json')
     return

@@ -1,5 +1,5 @@
-from src.segment_anything import build_sam_vit_b
-from src.segment_anything.modeling.sam import Sam
+from ..src.segment_anything import build_sam_vit_b
+from ..src.segment_anything.modeling.sam import Sam
 
 import numpy as np
 import torch
@@ -10,6 +10,7 @@ from torch.nn.parameter import Parameter
 from safetensors import safe_open
 from safetensors.torch import save_file
 import yaml
+import os
 
 class LoRA_qkv(nn.Module):
     """
@@ -158,6 +159,8 @@ class LoRA_sam(nn.Module):
         Return:
             None: Loads the weights to the LoRA_sam class
         """
+        filename = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', filename))
+        
         with safe_open(filename, framework="pt") as f:
             for i, w_A_linear in enumerate(self.A_weights):
                 saved_key = f"w_a_{i:03d}"
@@ -168,6 +171,8 @@ class LoRA_sam(nn.Module):
                 saved_key = f"w_b_{i:03d}"
                 saved_tensor = f.get_tensor(saved_key)
                 w_B_linear.weight = nn.Parameter(saved_tensor)
+                
+config_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'config.yaml'))
 
-with open("./config.yaml", "r") as ymlfile:
+with open(config_path, "r") as ymlfile:
    config_file = yaml.load(ymlfile, Loader=yaml.Loader)

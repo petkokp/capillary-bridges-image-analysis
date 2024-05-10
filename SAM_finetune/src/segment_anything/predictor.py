@@ -7,7 +7,7 @@
 import numpy as np
 import torch
 
-from src.segment_anything.modeling import Sam
+from ...src.segment_anything.modeling import Sam
 
 from typing import Optional, Tuple
 
@@ -76,6 +76,8 @@ class SamPredictor:
           original_image_size (tuple(int, int)): The size of the image
             before transformation, in (H, W) format.
         """
+        transformed_image = transformed_image[:, :3, :, :]
+        
         assert (
             len(transformed_image.shape) == 4
             and transformed_image.shape[1] == 3

@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
+import os
 
 from functools import partial
 
@@ -100,6 +101,9 @@ def _build_sam(
         pixel_std=[58.395, 57.12, 57.375],
     )
     sam.train()
+    
+    checkpoint = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', '..', 'sam_vit_b_01ec64.pth'))
+    
     if checkpoint is not None:
         with open(checkpoint, "rb") as f:
             state_dict = torch.load(f)
