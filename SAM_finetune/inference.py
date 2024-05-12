@@ -8,30 +8,20 @@ from .src.utils import get_bounding_box
 from PIL import Image
 from pathlib import Path
 from os.path import split
+import cv2
 
 parser = argparse.ArgumentParser(description="SAM-fine-tune Inference")
 parser.add_argument("-r", "--rank", default=512, help="LoRA model rank.")
 parser.add_argument("-l", "--lora", default="lora_weights/lora_rank512.safetensors", help="Location of LoRA Weight file.")
 parser.add_argument("-d", "--device", choices=["cuda", "cpu"], default="cuda", help="What device to run the inference on.")
 parser.add_argument("-b", "--baseline", action="store_true", help="Use baseline SAM instead of a LoRA model.")
-parser.add_argument("-m", "--mask", default=None, help="Location of the mask file to use for inference.")
 
 args = parser.parse_args()
 
-
-def inference_model(image_path, save_name, mask_path):
+def inference_model(image_path, save_name):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     image = Image.open(image_path)
-
-    if mask_path:
-        mask = Image.open(mask_path)
-        mask = mask.convert('1')
-        ground_truth_mask = np.array(mask)
-        box = get_bounding_box(ground_truth_mask)
-    else:
-        w, h = image.size
-        box = [0, 0, w, h]
 
     sam_checkpoint = "sam_vit_b_01ec64.pth"
     sam = build_sam_vit_b(checkpoint=sam_checkpoint)
@@ -43,14 +33,23 @@ def inference_model(image_path, save_name, mask_path):
         sam_lora = LoRA_sam(sam, rank)
         sam_lora.load_lora_parameters(args.lora)
         model = sam_lora.sam
+        
+    image = np.array(image)
 
     model.eval()
     model.to(device)
+    
     predictor = SamPredictor(model)
-    predictor.set_image(np.array(image))
+    predictor.set_image(image)
+    
+    input_point = np.array([[50, 350], [800, 350]])
+    input_label = np.array([1, 1])
+    
     masks, iou_pred, low_res_iou = predictor.predict(
-        box=np.array(box),
+        point_coords=input_point,
+        point_labels=input_label,
         multimask_output=False
     )
+    
     plt.imsave(save_name, masks[0])
     print("IoU Prediction:", iou_pred[0])
