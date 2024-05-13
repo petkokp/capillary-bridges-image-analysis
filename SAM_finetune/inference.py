@@ -42,7 +42,13 @@ def inference_model(image_path, save_name):
     predictor = SamPredictor(model)
     predictor.set_image(image)
     
-    input_point = np.array([[50, 350], [800, 350]])
+    height, width, _ = image.shape
+    
+    x_left = width - (width - 50)
+    x_right = width - 50
+    y = (height / 2) + 50
+    
+    input_point = np.array([[x_left, y], [x_right, y]])
     input_label = np.array([1, 1])
     
     masks, iou_pred, low_res_iou = predictor.predict(
