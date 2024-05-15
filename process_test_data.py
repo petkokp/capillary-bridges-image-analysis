@@ -7,7 +7,7 @@ from utilities.compare_models import compare_models
 from processing.process_test_data import process_test_data
 from utilities.models import Models
 
-MODEL = Models.SAM_FINETUNE #Models.MOBILE_SAM # "SAM" "NAIVE" # "SAM_FINETUNE"
+MODEL = Models.SAM_FINETUNE #Models.SAM #Models.MOBILE_SAM # "SAM" "NAIVE" # "SAM_FINETUNE"
 
 arg = ""
 
@@ -24,7 +24,8 @@ INDEX_TO_SEQUENCE = {
     # 3: '5%',
     # 4: '3%',
     # 5: '0%',
-    0: 'latest'
+    # 0: 'latest'
+    0: 'naive_model_test_set'
 }
 
 with open(f"{MODEL.value}_values.json", "w") as f:

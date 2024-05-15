@@ -1,9 +1,18 @@
 import cv2
+import glob
 from .process_image import process_image
 from utilities.extract_sequence_name_from_path import extract_sequence_name_from_path
 
-def process_sequence(path, correct_values, model):
-    _, imgs = cv2.imreadmulti(path)
+def process_sequence(path: str, correct_values, model):
+    imgs = []
+    
+    if path.endswith('.tif'):
+         _, imgs = cv2.imreadmulti(path)
+    else:
+        filenames = glob.glob(f"{path}/*.png")
+        filenames.sort()
+        imgs = [cv2.imread(img) for img in filenames]
+        
     processed_images = []
     all_results = []
 

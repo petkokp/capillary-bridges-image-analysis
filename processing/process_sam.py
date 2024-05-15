@@ -13,6 +13,6 @@ def process_sam(save_path, index, roi):
   
   SAM_PATH = f'./sam_results/{save_path}/{index}.png'
   
-  fast_sam(PATH, SAM_PATH)
+  fast_sam(PATH, SAM_PATH, roi)
   
   return cv2.imread(SAM_PATH)

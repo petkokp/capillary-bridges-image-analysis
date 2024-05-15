@@ -4,11 +4,7 @@ import numpy as np
 from .src.segment_anything import build_sam_vit_b, SamPredictor
 from .src.lora import LoRA_sam
 import matplotlib.pyplot as plt
-from .src.utils import get_bounding_box
 from PIL import Image
-from pathlib import Path
-from os.path import split
-import cv2
 
 parser = argparse.ArgumentParser(description="SAM-fine-tune Inference")
 parser.add_argument("-r", "--rank", default=512, help="LoRA model rank.")

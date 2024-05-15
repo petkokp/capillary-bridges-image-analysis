@@ -15,27 +15,31 @@ def save_output(mask, output_path, random_color=False):
     cv2.imwrite(output_path, mask_image)
 
 def mobile_sam(image, output_path):
-  model_type = "vit_t"
-  sam_checkpoint = "./weights/mobile_sam_weights/mobile_sam.pt"
+    model_type = "vit_t"
+    sam_checkpoint = "./weights/mobile_sam_weights/mobile_sam.pt"
 
-  device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-  mobile_sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
-  mobile_sam.to(device=device)
-  mobile_sam.eval()
+    mobile_sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+    mobile_sam.to(device=device)
+    mobile_sam.eval()
+    
+    predictor = SamPredictor(mobile_sam)
+    predictor.set_image(image)
+    
+    height, width, _ = image.shape
 
-  # bboxes=[[0, 0, 870, 930], [1100, 0, 2000, 950]])
+    x_left = width - (width - 50)
+    x_right = width - 50
+    y = (height / 2) + 50
+
+    input_point = np.array([[x_left, y], [x_right, y]])
+    input_label = np.array([1, 1])
+
+    masks, iou_pred, low_res_iou = predictor.predict(
+        point_coords=input_point,
+        point_labels=input_label,
+        multimask_output=False
+    )
   
-  predictor = SamPredictor(mobile_sam)
-  predictor.set_image(image)
-
-  input_box = np.array([0, 0, 870, 930])
-
-  masks, _, _ = predictor.predict(
-      point_coords=None,
-      point_labels=None,
-      box=input_box[None, :],
-      multimask_output=False,
-  )
-  
-  save_output(masks[0], output_path)
+    save_output(masks[0], output_path)
