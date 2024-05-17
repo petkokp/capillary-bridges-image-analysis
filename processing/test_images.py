@@ -6,6 +6,7 @@ from correct_values.correct_16_percent import CORRECT_16_PERCENT_NECK, CORRECT_1
 from correct_values.correct_20_percent import CORRECT_20_PERCENT_NECK, CORRECT_20_PERCENT_LEFT, CORRECT_20_PERCENT_RIGHT, CORRECT_20_PERCENT_UP, CORRECT_20_PERCENT_DOWN
 from correct_values.correct_latest import CORRECT_LATEST_NECK, CORRECT_LATEST_LEFT, CORRECT_LATEST_RIGHT, CORRECT_LATEST_UP, CORRECT_LATEST_DOWN
 from correct_values.correct_naive_model_test_set import CORRECT_NAIVE_MODEL_TEST_SET_NECK, CORRECT_NAIVE_MODEL_TEST_SET_LEFT, CORRECT_NAIVE_MODEL_TEST_SET_RIGHT, CORRECT_NAIVE_MODEL_TEST_SET_UP, CORRECT_NAIVE_MODEL_TEST_SET_DOWN
+from correct_values.correct_neural_network_test_set import CORRECT_NEURAL_NETWORK_TEST_SET_NECK, CORRECT_NEURAL_NETWORK_TEST_SET_LEFT, CORRECT_NEURAL_NETWORK_TEST_SET_RIGHT, CORRECT_NEURAL_NETWORK_TEST_SET_UP, CORRECT_NEURAL_NETWORK_TEST_SET_DOWN
 
 IMAGES_DATA = [
     # {
@@ -78,14 +79,24 @@ IMAGES_DATA = [
     #         'neck': CORRECT_LATEST_NECK,
     #     }
     # }
+    # {
+    #     'path': 'data/naive_model_test_set',
+    #     'values': {
+    #         'right': CORRECT_NAIVE_MODEL_TEST_SET_RIGHT,
+    #         'left': CORRECT_NAIVE_MODEL_TEST_SET_LEFT,
+    #         'up': CORRECT_NAIVE_MODEL_TEST_SET_UP,
+    #         'down': CORRECT_NAIVE_MODEL_TEST_SET_DOWN,
+    #         'neck': CORRECT_NAIVE_MODEL_TEST_SET_NECK,
+    #     }
+    # },
     {
-        'path': 'data/naive_model_test_set',
+        'path': 'data/neural_network_test_set',
         'values': {
-            'right': CORRECT_NAIVE_MODEL_TEST_SET_RIGHT,
-            'left': CORRECT_NAIVE_MODEL_TEST_SET_LEFT,
-            'up': CORRECT_NAIVE_MODEL_TEST_SET_UP,
-            'down': CORRECT_NAIVE_MODEL_TEST_SET_DOWN,
-            'neck': CORRECT_NAIVE_MODEL_TEST_SET_NECK,
+            'right': CORRECT_NEURAL_NETWORK_TEST_SET_RIGHT,
+            'left': CORRECT_NEURAL_NETWORK_TEST_SET_LEFT,
+            'up': CORRECT_NEURAL_NETWORK_TEST_SET_UP,
+            'down': CORRECT_NEURAL_NETWORK_TEST_SET_DOWN,
+            'neck': CORRECT_NEURAL_NETWORK_TEST_SET_NECK,
         }
     },
 ]

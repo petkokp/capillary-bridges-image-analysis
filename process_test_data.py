@@ -19,13 +19,14 @@ sequences_results, all_processed_images = process_test_data(MODEL)
 
 INDEX_TO_SEQUENCE = {
     # 0: '20%',
-    # 1: '16%',
+    #0: '16%',
     # 2: '15%',
     # 3: '5%',
     # 4: '3%',
     # 5: '0%',
     # 0: 'latest'
-    0: 'naive_model_test_set'
+    #0: 'naive_model_test_set'
+    0: 'neural_network_test_set'
 }
 
 with open(f"{MODEL.value}_values.json", "w") as f:
