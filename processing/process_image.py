@@ -8,8 +8,8 @@ from utilities.pixels_to_micrometers import pixels_to_micrometers
 from utilities.calculate_farthest_points import calculate_farthest_points
 from utilities.models import Models
 from .brighten import brighten
-from .process_sam import process_sam
-from processing.mobile_sam.process_mobile_sam import process_mobile_sam
+# from .process_sam import process_sam
+# from processing.mobile_sam.process_mobile_sam import process_mobile_sam
 from processing.finetuned_sam.process_sam_finetune import process_sam_finetune
 from utilities.construct_ellipse_from_contour import construct_ellipse_from_contour
 from utilities.calculations import calculate_base, calculate_height, calculate_x, calculate_y
@@ -214,11 +214,11 @@ def process_image(img, index, save_path, model=Models.SAM, correct_values=None, 
     
     image = roi
 
-    if model == Models.SAM:
-        image = process_sam(save_path, index, roi)
-    elif model == Models.MOBILE_SAM:
-        image = process_mobile_sam(save_path, index, roi)
-    elif model == Models.SAM_FINETUNE:
+    # if model == Models.SAM:
+    #     image = process_sam(save_path, index, roi)
+    # elif model == Models.MOBILE_SAM:
+    #     image = process_mobile_sam(save_path, index, roi)
+    if model == Models.SAM_FINETUNE:
         image = process_sam_finetune(save_path, index, roi)
 
     return measure(image, index, correct_values, bright)

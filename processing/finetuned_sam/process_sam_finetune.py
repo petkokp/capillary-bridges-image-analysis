@@ -1,4 +1,5 @@
 import cv2
+import os
 from .sam_finetune_inference import sam_finetune
 from utilities.create_dir import create_dir
 
@@ -15,4 +16,8 @@ def process_sam_finetune(save_path, index, roi):
   
   sam_finetune(roi, SAM_PATH)
   
-  return cv2.imread(SAM_PATH)
+  image = cv2.imread(SAM_PATH)
+  
+  os.remove(SAM_PATH)
+  
+  return image
