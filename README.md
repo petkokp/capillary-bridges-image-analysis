@@ -13,7 +13,7 @@ There can be used two different models for the image segmentation part:
 
 # Run against test data:
 
-MODEL = { "NAIVE", "SAM" }
+MODEL = { "NAIVE", "SAM", "MOBILE_SAM" }
 
 `python process_test_data.py NAIVE`
 

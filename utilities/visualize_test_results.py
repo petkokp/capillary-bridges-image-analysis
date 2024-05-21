@@ -39,9 +39,11 @@ def visualize_in_jupyter(sequences_results):
         "style='display:inline'").set_caption('3%')
     df6_styler = tables[5].style.set_table_attributes(
         "style='display:inline'").set_caption('0%')
+    df7_styler = tables[6].style.set_table_attributes(
+        "style='display:inline'").set_caption('New cam')
 
     display_html(df1_styler._repr_html_() + df2_styler._repr_html_() + df3_styler._repr_html_() +
-                    df4_styler._repr_html_() + df5_styler._repr_html_() + df6_styler._repr_html_(), raw=True)
+                    df4_styler._repr_html_() + df5_styler._repr_html_() + df6_styler._repr_html_() + df7_styler._repr_html_(), raw=True)
 
 
 def visualize_test_results(sequences_results, INDEX_TO_SEQUENCE):

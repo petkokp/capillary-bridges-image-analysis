@@ -1,7 +1,7 @@
 import json
-import sys
 import datetime
 from utilities.create_dir import create_dir
+from utilities.models import Models
 
 def extract_numeric_error(error_str):
     return float(error_str.split(', ')[1].split(' ')[0])
@@ -38,8 +38,10 @@ def read_json(path):
     return data
 
 INDEX_TO_MODEL = {
-    0: 'NAIVE',
-    1: 'SAM',
+    0: Models.NAIVE,
+    1: Models.SAM,
+    2: Models.MOBILE_SAM,
+    3: Models.SAM_FINETUNE,
 }
 
 def compare_models():
@@ -54,10 +56,24 @@ def compare_models():
   except:
     print('Could not compare models. Error with SAM_values.json')
     return
+  
+  try:
+    mobile_sam = read_json('MOBILE_SAM_values.json')
+  except:
+    print('Could not compare models. Error with MOBILE_SAM_values.json')
+    return
+  
+  try:
+    sam_finetune = read_json('SAM_FINETUNE_values.json')
+  except:
+    print('Could not compare models. Error with MOBILE_SAM_values.json')
+    return
 
   experiment_data = [
       naive,
-      sam
+      sam,
+      mobile_sam,
+      sam_finetune
   ]
 
   average_errors_per_experiment = compare_experiment_errors(experiment_data)
