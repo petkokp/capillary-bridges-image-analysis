@@ -41,6 +41,7 @@ INDEX_TO_MODEL = {
     0: Models.NAIVE,
     1: Models.SAM,
     2: Models.MOBILE_SAM,
+    3: Models.SAM_FINETUNE,
 }
 
 def compare_models():
@@ -61,11 +62,18 @@ def compare_models():
   except:
     print('Could not compare models. Error with MOBILE_SAM_values.json')
     return
+  
+  try:
+    sam_finetune = read_json('SAM_FINETUNE_values.json')
+  except:
+    print('Could not compare models. Error with MOBILE_SAM_values.json')
+    return
 
   experiment_data = [
       naive,
       sam,
-      mobile_sam
+      mobile_sam,
+      sam_finetune
   ]
 
   average_errors_per_experiment = compare_experiment_errors(experiment_data)

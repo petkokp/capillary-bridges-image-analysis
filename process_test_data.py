@@ -7,7 +7,7 @@ from utilities.compare_models import compare_models
 from processing.process_test_data import process_test_data
 from utilities.models import Models
 
-MODEL = Models.NAIVE #Models.MOBILE_SAM # "SAM" "NAIVE"
+MODEL = Models.SAM_FINETUNE #Models.SAM #Models.MOBILE_SAM # "SAM" "NAIVE" # "SAM_FINETUNE"
 
 arg = ""
 
@@ -19,12 +19,14 @@ sequences_results, all_processed_images = process_test_data(MODEL)
 
 INDEX_TO_SEQUENCE = {
     # 0: '20%',
-    # 1: '16%',
+    #0: '16%',
     # 2: '15%',
     # 3: '5%',
     # 4: '3%',
     # 5: '0%',
-    0: 'latest'
+    # 0: 'latest'
+    #0: 'naive_model_test_set'
+    0: 'neural_network_test_set'
 }
 
 with open(f"{MODEL.value}_values.json", "w") as f:
@@ -45,6 +47,8 @@ for i, image_sequence in enumerate(all_processed_images):
         SAVE_PATH = f'./standard_final_results/{SEQ}'
     elif MODEL == Models.MOBILE_SAM:
         SAVE_PATH = f'./mobile_sam_final_results/{SEQ}'
+    elif MODEL == Models.SAM_FINETUNE:
+        SAVE_PATH = f'./sam_finetune_final_results/{SEQ}'
         
     create_dir(SAVE_PATH)
 

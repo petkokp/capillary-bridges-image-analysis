@@ -1,13 +1,14 @@
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from tkinter import *
 import cv2
-from os.path import join, exists, expanduser
+from glob import glob
+from os.path import join, exists, expanduser, getctime
 from os import makedirs
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from processing.process_image_basic import process_image_basic
 from utilities.models import Models
-# from processing.process_image import process_image
+from processing.process_image import process_image
 
 from pypylon import pylon
 from datetime import datetime
@@ -41,6 +42,7 @@ BRIGHTEN = "Brighten"
 STANDARD_BRIGHTNESS = "Standard brightness"
 
 RECORDINGS_FOLDER = "recordings"
+EXCEL_VALUES_FILE_NAME = "measured_values.xlsx"
 
 MIN_EXPOSURE_TIME = 59
 MAX_EXPOSURE_TIME = 1000000
@@ -64,7 +66,7 @@ def create_images_folder_structure():
     worksheet = workbook.active
     worksheet.append(["Image", "Neck", "Down", "Up", "Left", "Right", "Left major", "Left minor", "Right major", "Right minor", "Left average", "Right average", "Base", "Height", "x", "1/x", "y"])
 
-    workbook.save(join(current_folder_path, "measured_values.xlsx"))
+    workbook.save(join(current_folder_path, EXCEL_VALUES_FILE_NAME))
     
 def create_recordings_folder_structure():
     RECORDINGS_PATH = join(base_dir, RECORDINGS_FOLDER)
@@ -89,7 +91,7 @@ def show_cam_frame(frame):
     label_widget.configure(image=img)
 
 def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str):
-    global running_camera
+    global running_camera, frame, processed_frame, values
     if running_camera:
         running_camera = False
         
@@ -105,12 +107,15 @@ def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str
     if file_path:
         image = cv2.imread(file_path)
         
-        processed_image, _, values = process_image_basic(image, bright=selected_brightness_index == BRIGHTEN) # process_image(image, 0, './temp', MODEL)
+        processed_image, _, values = process_image(image, 0, './temp', MODEL, bright=selected_brightness_index == BRIGHTEN)
         
         update_values_label(values)
 
         if processed_image is not None:
+            frame = image
+            processed_frame = processed_image
             show_cam_frame(processed_image)
+            save_button.config(state="normal")
 
 def start_recording(selected_camera_index: str):
     global is_recording, out, running_camera
@@ -180,11 +185,20 @@ def open_camera(selected_camera_index: str, selected_brightness_index: str):
         if not is_recording: save_button.config(state="normal")
         
 def save_frame(frame, processed_frame, values):
-    global workbook, worksheet, image_count
+    global workbook, worksheet, image_count, current_folder_path
     
     image_count += 1
-    raw_image_filename = f"raw_{image_count}.jpg"
-    processed_image_filename = f"processed_{image_count}.jpg"
+    raw_image_filename = f"raw_{image_count}.png"
+    processed_image_filename = f"processed_{image_count}.png"
+    
+    if current_folder_path == None:
+        list_of_files = glob(join(base_dir, '*'))
+        latest_file = max(list_of_files, key=getctime)
+        current_folder_path = latest_file
+        
+    if worksheet == None:
+        workbook = load_workbook(join(current_folder_path, EXCEL_VALUES_FILE_NAME))
+        worksheet = workbook.active
 
     cv2.imwrite(join(current_folder_path, raw_image_filename), frame)
     cv2.imwrite(join(current_folder_path, processed_image_filename), processed_frame)
@@ -192,12 +206,14 @@ def save_frame(frame, processed_frame, values):
     values_list = [values[key] for key in ["neck", "down", "up", "left", "right", "left major", "left minor", "right major", "right minor", "left average", "right average", "base", "height", "x", "1/x", "y"]]
 
     worksheet.append([worksheet.max_row, *values_list])
-    workbook.save(join(current_folder_path, "measured_values.xlsx"))
+    workbook.save(join(current_folder_path, EXCEL_VALUES_FILE_NAME))
     
 def save_current_frame():
-    global frame, processed_frame, values
+    global frame, processed_frame, values, running_camera
+
     if frame is not None and processed_frame is not None and values is not None:
         save_frame(frame, processed_frame, values)
+        if not running_camera: save_button.config(state="disabled")
 
 def capture_standard(selected_brightness_index: str):
     global frame, processed_frame, values, should_process_image
@@ -335,11 +351,11 @@ brighten_menu.pack(side="right", padx=10, pady=10)
 image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image(Models.NAIVE, selected_camera_index, selected_brightness_index))
 image_button_basic.pack(side="right", padx=10, pady=10)
 
+image_button_neural_network = Button(app, text="Process an image (neural network)", command=lambda: open_image(Models.SAM_FINETUNE, selected_camera_index, selected_brightness_index))
+image_button_neural_network.pack(side="right", padx=10, pady=10)
+
 toggle_button = Button(app, text="Toggle processing", command=toggle_processing)
 toggle_button.pack(side="right", padx=10, pady=10)
-
-# image_button_basic = Button(app, text="Process an image (neural network)", command=lambda: open_image(Models.SAM, selected_camera_index))
-# image_button_basic.pack(side="right", padx=10, pady=10)
 
 def exposure_validation_callback(P):
     if str.isdigit(P) or P == "": return True
