@@ -229,11 +229,14 @@ def capture_standard(selected_brightness_index: str):
         show_cam_frame(frame)
 
     if frame is not None and not is_recording:
-        processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
-        
-        update_values_label(values)
+        try:
+            processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
+            
+            update_values_label(values)
 
-        show_cam_frame(processed_frame if should_process_image else frame)
+            show_cam_frame(processed_frame if should_process_image else frame)
+        except:
+            print('ERROR: Could not process image')
 
     label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
             
@@ -272,11 +275,14 @@ def capture_basler(selected_brightness_index: str):
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
-                processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
+                try:
+                    processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
                 
-                update_values_label(values)
+                    update_values_label(values)
 
-                show_cam_frame(processed_frame if should_process_image else frame)
+                    show_cam_frame(processed_frame if should_process_image else frame)
+                except:
+                    print('ERROR: Could not process image')
 
             label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
 
