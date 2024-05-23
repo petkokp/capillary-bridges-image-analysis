@@ -15,13 +15,11 @@ There can be used two different models for the image segmentation part:
 
 MODEL = { "NAIVE", "SAM", "MOBILE_SAM" }
 
+`python process_test_data.py {MODEL}`
+
+Test with naive model:
+
 `python process_test_data.py NAIVE`
-
-# Run realtime
-
-Realtime works only with NAIVE model.
-
-`python process_realtime.py`
 
 # Create executable
 
