@@ -6,7 +6,6 @@ from os.path import join, exists, expanduser, getctime
 from os import makedirs
 from PIL import Image, ImageTk
 from tkinter import filedialog
-from processing.process_image_basic import process_image_basic
 from utilities.models import Models
 from processing.process_image import process_image
 
@@ -107,7 +106,7 @@ def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str
     if file_path:
         image = cv2.imread(file_path)
         
-        processed_image, _, values = process_image(image, 0, './temp', MODEL, bright=selected_brightness_index == BRIGHTEN)
+        processed_image, _, values = process_image(image, 0, './temp', model=MODEL, bright=selected_brightness_index == BRIGHTEN)
         
         update_values_label(values)
 
@@ -139,7 +138,7 @@ def start_recording(selected_camera_index: str):
     is_recording = True
     
     if not running_camera:
-        open_camera(selected_camera_index)
+        open_camera(selected_camera_index, selected_brightness_index=sel)
     
 def stop_recording(selected_camera_index: str):
     global running_camera, is_recording
@@ -230,7 +229,7 @@ def capture_standard(selected_brightness_index: str):
         show_cam_frame(frame)
 
     if frame is not None and not is_recording:
-        processed_frame, _, values = process_image_basic(frame, bright=selected_brightness_index == BRIGHTEN)
+        processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
         
         update_values_label(values)
 
@@ -273,7 +272,7 @@ def capture_basler(selected_brightness_index: str):
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
-                processed_frame, _, values = process_image_basic(frame, bright=selected_brightness_index == BRIGHTEN)
+                processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
                 
                 update_values_label(values)
 
@@ -365,8 +364,8 @@ brighten_menu.pack(side="right", padx=10, pady=10)
 image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image(Models.NAIVE, selected_camera_index, selected_brightness_index))
 image_button_basic.pack(side="right", padx=10, pady=10)
 
-image_button_neural_network = Button(app, text="Process an image (neural network)", command=lambda: open_image(Models.SAM_FINETUNE, selected_camera_index, selected_brightness_index))
-image_button_neural_network.pack(side="right", padx=10, pady=10)
+# image_button_neural_network = Button(app, text="Process an image (neural network)", command=lambda: open_image(Models.SAM_FINETUNE, selected_camera_index, selected_brightness_index))
+# image_button_neural_network.pack(side="right", padx=10, pady=10)
 
 toggle_button = Button(app, text="Toggle processing", command=toggle_processing)
 toggle_button.pack(side="right", padx=10, pady=10)
