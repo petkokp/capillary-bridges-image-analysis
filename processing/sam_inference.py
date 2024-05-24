@@ -16,13 +16,13 @@ def fast_sam(image_path, output_path, image):
   
   height, width, _ = image.shape
   
-  x_left = width - (width - 50)
-  x_right = width - 50
-  y = (height / 2) + 50
+  x_left = int(width - (width - 50))
+  x_right = int(width - 50)
+  y = int((height / 2) + 50)
   
-  points = np.array([[x_left, y], [x_right, y]])
+  points = np.array([[x_left, y], [x_right, y]]) 
   input_label = np.array([1, 1])
   
-  ann = prompt_process.point_prompt(points=points, pointlabel=input_label)
+  ann = prompt_process.point_prompt(points=points, pointlabel=input_label) 
 
   prompt_process.plot(annotations=ann, output_path=output_path)
