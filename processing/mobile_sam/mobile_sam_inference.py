@@ -29,9 +29,9 @@ def mobile_sam(image, output_path):
     
     height, width, _ = image.shape
 
-    x_left = width - (width - 50)
-    x_right = width - 50
-    y = (height / 2) + 50
+    x_left = int(width - (width - 50))
+    x_right = int(width - 50)
+    y = int((height / 2) + 50)
 
     input_point = np.array([[x_left, y], [x_right, y]])
     input_label = np.array([1, 1])
