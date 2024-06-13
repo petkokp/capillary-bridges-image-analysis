@@ -3,14 +3,15 @@ from tkinter import *
 import cv2
 from glob import glob
 from os.path import join, exists, expanduser, getctime
-from os import makedirs
+from os import makedirs, listdir
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from utilities.models import Models
 from processing.process_image import process_image
-
 from pypylon import pylon
 from datetime import datetime
+
+from imageio import get_writer
 
 width, height = 1300, 700
 
@@ -33,6 +34,8 @@ running_camera = False
 is_recording = False
 is_grabbing = False
 should_process_image = True
+
+BASLER_TEMP_VIDEO_PATH = "basler_temp_video"
 
 STANDARD_CAMERA = "Standard"
 BASLER_CAMERA = "Basler"
@@ -117,7 +120,7 @@ def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str
             save_button.config(state="normal")
 
 def start_recording(selected_camera_index: str):
-    global is_recording, out, running_camera
+    global is_recording, out, running_camera, basler_writer, video_path
     
     create_recordings_folder_structure()
     
@@ -132,20 +135,101 @@ def start_recording(selected_camera_index: str):
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    if selected_camera_index == BASLER_CAMERA:
+        video_path = join(base_dir, join(RECORDINGS_FOLDER, f"{timestamp}.mkv"))
+
+        fps_value = None
+        fps_entry_value = fps_entry.get()
+        if fps_entry_value != '': fps_value = round(float(fps_entry_value), 2)   
+        if fps_value:
+            basler_camera.AcquisitionFrameRateEnable.Value = True
+            basler_camera.AcquisitionFrameRate.Value = fps_value
+
+        print("recording with fps: ", fps_value)
+
+        basler_writer = get_writer(
+            video_path,  # mkv players often support H.264
+            fps=fps_value,  # FPS is in units Hz; should be real-time.
+            codec='libx264',  # When used properly, this is basically "PNG for video" (i.e. lossless)
+            quality=None,  # disables variable compression
+            ffmpeg_params=[  # compatibility with older library versions
+                '-preset',   # set to fast, faster, veryfast, superfast, ultrafast
+                'fast',      # for higher speed but worse compression
+                '-crf',      # quality; set to 0 for lossless, but keep in mind
+                '24'         # that the camera probably adds static anyway
+            ]
+        )
+    else:
+        out = cv2.VideoWriter(join(base_dir, join(RECORDINGS_FOLDER, f"{timestamp}.avi")), 0, 20.0, (640,  480))
     
-    out = cv2.VideoWriter(join(base_dir, join(RECORDINGS_FOLDER, f"{timestamp}.avi")), fourcc, 20.0, (640,  480))
+    #if not exists(BASLER_TEMP_VIDEO_PATH) and selected_camera_index == BASLER_CAMERA: makedirs(BASLER_TEMP_VIDEO_PATH)
     
     is_recording = True
     
     if not running_camera:
-        open_camera(selected_camera_index, selected_brightness_index=sel)
+        open_camera(selected_camera_index, selected_brightness_index=STANDARD_BRIGHTNESS)
     
 def stop_recording(selected_camera_index: str):
-    global running_camera, is_recording
+    global running_camera, is_recording, video_path
     
     if not is_recording: return
-    
-    out.release()
+
+    is_basler = selected_camera_index == BASLER_CAMERA
+
+    print('is basler: ', is_basler)
+
+    if is_basler:
+        # TODO - split video to images and process them
+
+        cap = cv2.VideoCapture(video_path)
+
+        folder = "split_video"
+
+        try:
+            if not exists(folder):
+                makedirs(folder)
+        except OSError:
+            print ('Error: Creating directory of data')
+
+        currentFrame = 0
+        while(True):
+            # Capture frame-by-frame
+            ret, frame = cap.read()
+
+            if not ret:
+                print('breaking')
+                break
+
+            # Saves image of the current frame in jpg file
+            name = f'./{folder}/frame' + str(currentFrame) + '.jpg'
+            print ('Creating...' + name)
+            cv2.imwrite(name, frame)
+
+            # To stop duplicate images
+            currentFrame += 1
+
+        # When everything done, release the capture
+        cap.release()
+
+        # images = [img for img in listdir(BASLER_TEMP_VIDEO_PATH) if img.endswith(".png")]
+
+        # frame = cv2.imread(join(BASLER_TEMP_VIDEO_PATH, images[0]))
+        # height, width, layers = frame.shape
+
+        # video = cv2.VideoWriter(join("frames", "video.avi"), 0, 20, (width, height))
+
+        # print('total images: ', len(images))
+
+        # for image in images:
+        #     data = cv2.imread(join(BASLER_TEMP_VIDEO_PATH, image))
+        #     video.write(data)
+
+        # print("wrote images to video")
+        #shutil.rmtree(BASLER_TEMP_VIDEO_PATH)
+    else:
+        out.release()
+
     is_recording = False
     
     stop_button.config(state="disabled")
@@ -155,7 +239,7 @@ def stop_recording(selected_camera_index: str):
         
         if selected_camera_index == STANDARD_CAMERA and standard_camera is not None:
             standard_camera.release()
-        elif selected_camera_index == BASLER_CAMERA and basler_camera is not None:
+        elif is_basler and basler_camera is not None:
             basler_camera.StopGrabbing()
         
         running_camera = False
@@ -241,7 +325,7 @@ def capture_standard(selected_brightness_index: str):
     label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
             
 def capture_basler(selected_brightness_index: str):
-        global is_grabbing, converter, frame, processed_frame, values, should_process_image
+        global is_grabbing, converter, frame, processed_frame, values, should_process_image, basler_writer
         if not is_grabbing:
             basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             is_grabbing = True
@@ -271,7 +355,9 @@ def capture_basler(selected_brightness_index: str):
             frame = image.GetArray()
 
             if frame is not None and is_recording:
-                out.write(frame)
+                #timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                #cv2.imwrite(join(BASLER_TEMP_VIDEO_PATH, f"{timestamp}.png"), frame)
+                basler_writer.append_data(frame)
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
@@ -289,7 +375,7 @@ def capture_basler(selected_brightness_index: str):
         grabResult.Release()
 
 def capture_camera(selected_camera_index: str, selected_brightness_index: str):
-    global is_grabbing
+    global is_grabbing, basler_writer
     if running_camera:
         if selected_camera_index == STANDARD_CAMERA:
             capture_standard(selected_brightness_index)
