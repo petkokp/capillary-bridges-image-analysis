@@ -3,14 +3,15 @@ from tkinter import *
 import cv2
 from glob import glob
 from os.path import join, exists, expanduser, getctime
-from os import makedirs
+from os import makedirs, remove
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from utilities.models import Models
 from processing.process_image import process_image
-
 from pypylon import pylon
 from datetime import datetime
+
+from imageio import get_writer
 
 width, height = 1300, 700
 
@@ -34,6 +35,8 @@ is_recording = False
 is_grabbing = False
 should_process_image = True
 
+BASLER_TEMP_VIDEO_PATH = "basler_temp_video"
+
 STANDARD_CAMERA = "Standard"
 BASLER_CAMERA = "Basler"
 
@@ -54,11 +57,14 @@ image_count = 0
 values = None
 
 def create_images_folder_structure():
-    global current_folder_path, workbook, worksheet
+    global current_folder_path, workbook, worksheet, is_recording
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     current_folder_path = join(base_dir, timestamp)
+
+    if is_recording: current_folder_path = join(base_dir, RECORDINGS_FOLDER, timestamp)
+
     makedirs(current_folder_path)
 
     workbook = Workbook()
@@ -117,9 +123,13 @@ def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str
             save_button.config(state="normal")
 
 def start_recording(selected_camera_index: str):
-    global is_recording, out, running_camera
+    global is_recording, out, running_camera, basler_writer, video_path
+
+    is_recording = True
     
-    create_recordings_folder_structure()
+    create_images_folder_structure()
+
+    # create_recordings_folder_structure()
     
     save_button.config(state="disabled")
     
@@ -132,20 +142,90 @@ def start_recording(selected_camera_index: str):
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    
-    out = cv2.VideoWriter(join(base_dir, join(RECORDINGS_FOLDER, f"{timestamp}.avi")), fourcc, 20.0, (640,  480))
-    
-    is_recording = True
+
+    if selected_camera_index == BASLER_CAMERA:
+        video_path = join(current_folder_path, "video.mkv")
+
+        fps_value = None
+        fps_entry_value = fps_entry.get()
+        if fps_entry_value != '': fps_value = round(float(fps_entry_value), 2)   
+        if fps_value:
+            basler_camera.AcquisitionFrameRateEnable.Value = True
+            basler_camera.AcquisitionFrameRate.Value = fps_value
+
+        basler_writer = get_writer(
+            video_path,  # mkv players often support H.264
+            fps=fps_value,  # FPS is in units Hz; should be real-time.
+            codec='libx264',  # When used properly, this is basically "PNG for video" (i.e. lossless)
+            quality=None,  # disables variable compression
+            ffmpeg_params=[  # compatibility with older library versions
+                '-preset',   # set to fast, faster, veryfast, superfast, ultrafast
+                'fast',      # for higher speed but worse compression
+                '-crf',      # quality; set to 0 for lossless, but keep in mind
+                '24'         # that the camera probably adds static anyway
+            ]
+        )
+    else:
+        out = cv2.VideoWriter(join(current_folder_path, "video.avi"), 0, 20.0, (640,  480))
     
     if not running_camera:
-        open_camera(selected_camera_index, selected_brightness_index=sel)
+        open_camera(selected_camera_index, selected_brightness_index=STANDARD_BRIGHTNESS)
     
 def stop_recording(selected_camera_index: str):
-    global running_camera, is_recording
+    global running_camera, is_recording, video_path, frame, processed_frame, current_folder_path, values
     
     if not is_recording: return
-    
-    out.release()
+
+    is_basler = selected_camera_index == BASLER_CAMERA
+
+    if is_basler:
+        RECORDINGS_PATH = join(base_dir, RECORDINGS_FOLDER)
+
+        video_path = join(RECORDINGS_PATH, "2024-06-13_15-42-32.mkv") # TODO - remove after testing
+
+        cap = cv2.VideoCapture(video_path)
+
+        cap_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+
+        new_video_path = join(current_folder_path, "video.mp4")
+
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        output = cv2.VideoWriter(new_video_path, fourcc, 15,
+                         (cap_width, cap_height))
+        
+        while True:
+            ret, frame = cap.read()
+
+            if not ret:
+                break
+
+            output.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+
+        cap.release()
+        output.release()
+
+        #remove(video_path)
+
+        new_cap = cv2.VideoCapture(new_video_path)
+
+        currentFrame = 0
+        while(True):
+            ret, frame = new_cap.read()
+
+            if not ret:
+                break
+
+            processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
+
+            save_current_frame()
+
+            currentFrame += 1
+
+        new_cap.release()
+    else:
+        out.release()
+
     is_recording = False
     
     stop_button.config(state="disabled")
@@ -155,7 +235,7 @@ def stop_recording(selected_camera_index: str):
         
         if selected_camera_index == STANDARD_CAMERA and standard_camera is not None:
             standard_camera.release()
-        elif selected_camera_index == BASLER_CAMERA and basler_camera is not None:
+        elif is_basler and basler_camera is not None:
             basler_camera.StopGrabbing()
         
         running_camera = False
@@ -208,7 +288,9 @@ def save_frame(frame, processed_frame, values):
     cv2.imwrite(join(current_folder_path, raw_image_filename), frame)
     cv2.imwrite(join(current_folder_path, processed_image_filename), processed_frame)
     
-    values_list = [values[key] for key in ["neck", "down", "up", "left", "right", "left major", "left minor", "right major", "right minor", "left average", "right average", "base", "height", "x", "1/x", "y"]]
+    keys = filter(lambda x: x in values, ["neck", "down", "up", "left", "right", "left major", "left minor", "right major", "right minor", "left average", "right average", "base", "height", "x", "1/x", "y"]) 
+
+    values_list = [values[key] for key in keys]
 
     worksheet.append([worksheet.max_row, *values_list])
     workbook.save(join(current_folder_path, EXCEL_VALUES_FILE_NAME))
@@ -241,7 +323,7 @@ def capture_standard(selected_brightness_index: str):
     label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
             
 def capture_basler(selected_brightness_index: str):
-        global is_grabbing, converter, frame, processed_frame, values, should_process_image
+        global is_grabbing, converter, frame, processed_frame, values, should_process_image, basler_writer, c
         if not is_grabbing:
             basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             is_grabbing = True
@@ -271,13 +353,13 @@ def capture_basler(selected_brightness_index: str):
             frame = image.GetArray()
 
             if frame is not None and is_recording:
-                out.write(frame)
+                basler_writer.append_data(frame)
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
                 try:
                     processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
-                
+
                     update_values_label(values)
 
                     show_cam_frame(processed_frame if should_process_image else frame)
@@ -289,7 +371,7 @@ def capture_basler(selected_brightness_index: str):
         grabResult.Release()
 
 def capture_camera(selected_camera_index: str, selected_brightness_index: str):
-    global is_grabbing
+    global is_grabbing, basler_writer
     if running_camera:
         if selected_camera_index == STANDARD_CAMERA:
             capture_standard(selected_brightness_index)
@@ -393,6 +475,5 @@ fps_entry.pack(side="right", padx=5)
 fps_entry.config(state="disabled")
 fps_label = Label(app, text="FPS:")
 fps_label.pack(side="right", padx=5)
-
 
 app.mainloop()

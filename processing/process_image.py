@@ -156,7 +156,7 @@ def measure(roi, index=None, correct_values=None, bright=False):
 
             right_minor_distance = pixels_to_micrometers(
                 np.sqrt((right_minor_axis[0][0] - right_minor_axis[1][0]) ** 2 + (right_minor_axis[0][1] - right_minor_axis[1][1]) ** 2))
-            
+
             values['right major'] = right_major_distance
             values['right minor'] = right_minor_distance
             values['right average'] = (right_major_distance + right_minor_distance) / 2
@@ -204,7 +204,7 @@ def measure(roi, index=None, correct_values=None, bright=False):
 
     return img_with_line, results, values
 
-def process_image(img, index, save_path, model=Models.SAM, correct_values=None, bright=False):
+def process_image(img, index, save_path=None, model=Models.SAM, correct_values=None, bright=False):
     top_crop = 60
     bottom_crop = 70
     left_crop = 60
