@@ -30,8 +30,6 @@ label_widget.photo_image = empty_image
 values_label = Label(app, text="", font=("Helvetica", 10), wraplength=1200, anchor='w')
 values_label.pack(pady=10)
 
-c = 0
-
 running_camera = False
 is_recording = False
 is_grabbing = False
