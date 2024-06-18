@@ -181,8 +181,6 @@ def stop_recording(selected_camera_index: str):
     if is_basler:
         RECORDINGS_PATH = join(base_dir, RECORDINGS_FOLDER)
 
-        video_path = join(RECORDINGS_PATH, "2024-06-13_15-42-32.mkv") # TODO - remove after testing
-
         cap = cv2.VideoCapture(video_path)
 
         cap_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -343,7 +341,7 @@ def capture_basler(selected_brightness_index: str):
         if exposure_entry_value != '': exposure_time = int(exposure_entry_value)   
         if exposure_time and exposure_time >= MIN_EXPOSURE_TIME and exposure_time <= MAX_EXPOSURE_TIME: basler_camera.ExposureTime.SetValue(exposure_time)
 
-        if not fps_entry_value: # TODO - sync with exposure time
+        if not fps_entry_value:
             fps = basler_camera.ResultingFrameRate.Value
             update_frame_rate(fps)
         
