@@ -72,13 +72,6 @@ def create_images_folder_structure():
     worksheet.append(["Image", "Neck", "Down", "Up", "Left", "Right", "Left major", "Left minor", "Right major", "Right minor", "Left average", "Right average", "Base", "Height", "x", "1/x", "y"])
 
     workbook.save(join(current_folder_path, EXCEL_VALUES_FILE_NAME))
-    
-def create_recordings_folder_structure():
-    RECORDINGS_PATH = join(base_dir, RECORDINGS_FOLDER)
-    
-    recordings_folder_exists = exists(RECORDINGS_PATH)
-    
-    if not recordings_folder_exists: makedirs(RECORDINGS_PATH)
 
 def show_cam_frame(frame):
     if frame is None: return
@@ -128,8 +121,6 @@ def start_recording(selected_camera_index: str):
     is_recording = True
     
     create_images_folder_structure()
-
-    # create_recordings_folder_structure()
     
     save_button.config(state="disabled")
     
@@ -172,13 +163,15 @@ def start_recording(selected_camera_index: str):
         open_camera(selected_camera_index, selected_brightness_index=STANDARD_BRIGHTNESS)
     
 def stop_recording(selected_camera_index: str):
-    global running_camera, is_recording, video_path, frame, processed_frame, current_folder_path, values
+    global running_camera, is_recording, video_path, frame, processed_frame, current_folder_path, values, basler_writer
     
     if not is_recording: return
 
     is_basler = selected_camera_index == BASLER_CAMERA
 
     if is_basler:
+        basler_writer.close()
+
         RECORDINGS_PATH = join(base_dir, RECORDINGS_FOLDER)
 
         cap = cv2.VideoCapture(video_path)
