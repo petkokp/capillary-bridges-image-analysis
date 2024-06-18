@@ -1,4 +1,4 @@
-# Convert pixels to micrometers according data in "./correct_values"
+# Convert pixels to micrometers according to data in "./correct_values"
 def pixels_to_micrometers(pixels):
     known_pixels = 1920
     known_micrometers = 3659.269

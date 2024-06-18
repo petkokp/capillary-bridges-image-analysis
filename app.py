@@ -3,7 +3,7 @@ from tkinter import *
 import cv2
 from glob import glob
 from os.path import join, exists, expanduser, getctime
-from os import makedirs, listdir
+from os import makedirs, remove
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from utilities.models import Models
@@ -29,6 +29,8 @@ label_widget.photo_image = empty_image
 
 values_label = Label(app, text="", font=("Helvetica", 10), wraplength=1200, anchor='w')
 values_label.pack(pady=10)
+
+c = 0
 
 running_camera = False
 is_recording = False
@@ -57,11 +59,14 @@ image_count = 0
 values = None
 
 def create_images_folder_structure():
-    global current_folder_path, workbook, worksheet
+    global current_folder_path, workbook, worksheet, is_recording
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     current_folder_path = join(base_dir, timestamp)
+
+    if is_recording: current_folder_path = join(base_dir, RECORDINGS_FOLDER, timestamp)
+
     makedirs(current_folder_path)
 
     workbook = Workbook()
@@ -121,8 +126,12 @@ def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str
 
 def start_recording(selected_camera_index: str):
     global is_recording, out, running_camera, basler_writer, video_path
+
+    is_recording = True
     
-    create_recordings_folder_structure()
+    create_images_folder_structure()
+
+    # create_recordings_folder_structure()
     
     save_button.config(state="disabled")
     
@@ -137,7 +146,7 @@ def start_recording(selected_camera_index: str):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     if selected_camera_index == BASLER_CAMERA:
-        video_path = join(base_dir, join(RECORDINGS_FOLDER, f"{timestamp}.mkv"))
+        video_path = join(current_folder_path, "video.mkv")
 
         fps_value = None
         fps_entry_value = fps_entry.get()
@@ -145,8 +154,6 @@ def start_recording(selected_camera_index: str):
         if fps_value:
             basler_camera.AcquisitionFrameRateEnable.Value = True
             basler_camera.AcquisitionFrameRate.Value = fps_value
-
-        print("recording with fps: ", fps_value)
 
         basler_writer = get_writer(
             video_path,  # mkv players often support H.264
@@ -161,72 +168,63 @@ def start_recording(selected_camera_index: str):
             ]
         )
     else:
-        out = cv2.VideoWriter(join(base_dir, join(RECORDINGS_FOLDER, f"{timestamp}.avi")), 0, 20.0, (640,  480))
-    
-    #if not exists(BASLER_TEMP_VIDEO_PATH) and selected_camera_index == BASLER_CAMERA: makedirs(BASLER_TEMP_VIDEO_PATH)
-    
-    is_recording = True
+        out = cv2.VideoWriter(join(current_folder_path, "video.avi"), 0, 20.0, (640,  480))
     
     if not running_camera:
         open_camera(selected_camera_index, selected_brightness_index=STANDARD_BRIGHTNESS)
     
 def stop_recording(selected_camera_index: str):
-    global running_camera, is_recording, video_path
+    global running_camera, is_recording, video_path, frame, processed_frame, current_folder_path, values
     
     if not is_recording: return
 
     is_basler = selected_camera_index == BASLER_CAMERA
 
-    print('is basler: ', is_basler)
-
     if is_basler:
-        # TODO - split video to images and process them
+        RECORDINGS_PATH = join(base_dir, RECORDINGS_FOLDER)
+
+        video_path = join(RECORDINGS_PATH, "2024-06-13_15-42-32.mkv") # TODO - remove after testing
 
         cap = cv2.VideoCapture(video_path)
 
-        folder = "split_video"
+        cap_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 
-        try:
-            if not exists(folder):
-                makedirs(folder)
-        except OSError:
-            print ('Error: Creating directory of data')
+        new_video_path = join(current_folder_path, "video.mp4")
 
-        currentFrame = 0
-        while(True):
-            # Capture frame-by-frame
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        output = cv2.VideoWriter(new_video_path, fourcc, 15,
+                         (cap_width, cap_height))
+        
+        while True:
             ret, frame = cap.read()
 
             if not ret:
-                print('breaking')
                 break
 
-            # Saves image of the current frame in jpg file
-            name = f'./{folder}/frame' + str(currentFrame) + '.jpg'
-            print ('Creating...' + name)
-            cv2.imwrite(name, frame)
+            output.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
 
-            # To stop duplicate images
+        cap.release()
+        output.release()
+
+        #remove(video_path)
+
+        new_cap = cv2.VideoCapture(new_video_path)
+
+        currentFrame = 0
+        while(True):
+            ret, frame = new_cap.read()
+
+            if not ret:
+                break
+
+            processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
+
+            save_current_frame()
+
             currentFrame += 1
 
-        # When everything done, release the capture
-        cap.release()
-
-        # images = [img for img in listdir(BASLER_TEMP_VIDEO_PATH) if img.endswith(".png")]
-
-        # frame = cv2.imread(join(BASLER_TEMP_VIDEO_PATH, images[0]))
-        # height, width, layers = frame.shape
-
-        # video = cv2.VideoWriter(join("frames", "video.avi"), 0, 20, (width, height))
-
-        # print('total images: ', len(images))
-
-        # for image in images:
-        #     data = cv2.imread(join(BASLER_TEMP_VIDEO_PATH, image))
-        #     video.write(data)
-
-        # print("wrote images to video")
-        #shutil.rmtree(BASLER_TEMP_VIDEO_PATH)
+        new_cap.release()
     else:
         out.release()
 
@@ -292,7 +290,9 @@ def save_frame(frame, processed_frame, values):
     cv2.imwrite(join(current_folder_path, raw_image_filename), frame)
     cv2.imwrite(join(current_folder_path, processed_image_filename), processed_frame)
     
-    values_list = [values[key] for key in ["neck", "down", "up", "left", "right", "left major", "left minor", "right major", "right minor", "left average", "right average", "base", "height", "x", "1/x", "y"]]
+    keys = filter(lambda x: x in values, ["neck", "down", "up", "left", "right", "left major", "left minor", "right major", "right minor", "left average", "right average", "base", "height", "x", "1/x", "y"]) 
+
+    values_list = [values[key] for key in keys]
 
     worksheet.append([worksheet.max_row, *values_list])
     workbook.save(join(current_folder_path, EXCEL_VALUES_FILE_NAME))
@@ -325,7 +325,7 @@ def capture_standard(selected_brightness_index: str):
     label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
             
 def capture_basler(selected_brightness_index: str):
-        global is_grabbing, converter, frame, processed_frame, values, should_process_image, basler_writer
+        global is_grabbing, converter, frame, processed_frame, values, should_process_image, basler_writer, c
         if not is_grabbing:
             basler_camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             is_grabbing = True
@@ -355,15 +355,13 @@ def capture_basler(selected_brightness_index: str):
             frame = image.GetArray()
 
             if frame is not None and is_recording:
-                #timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                #cv2.imwrite(join(BASLER_TEMP_VIDEO_PATH, f"{timestamp}.png"), frame)
                 basler_writer.append_data(frame)
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
                 try:
                     processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
-                
+
                     update_values_label(values)
 
                     show_cam_frame(processed_frame if should_process_image else frame)
@@ -479,6 +477,5 @@ fps_entry.pack(side="right", padx=5)
 fps_entry.config(state="disabled")
 fps_label = Label(app, text="FPS:")
 fps_label.pack(side="right", padx=5)
-
 
 app.mainloop()
