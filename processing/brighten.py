@@ -1,22 +1,25 @@
 import cv2
-import numpy as np
 
-def brighten(image):
-  # convert to LAB and extract L  channel
-  LAB = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-  L = LAB[:,:,0]
-  # threshold L channel with triangle method
-  value, thresh = cv2.threshold(L, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-  # threshold with adjusted value
-  value = value + 10
-  thresh = cv2.threshold(L, value, 255, cv2.THRESH_BINARY)[1]
-  # invert threshold and make 3 channels
-  thresh = 255 - thresh
-  thresh = cv2.merge([thresh, thresh, thresh])
-  gain = 2.5
-  blue = cv2.multiply(image[:,:,0], gain)
-  green = cv2.multiply(image[:,:,1], gain)
-  red = cv2.multiply(image[:,:,2], gain)
-  img_bright = cv2.merge([blue, green, red])
-  # blend original and brightened using thresh as mask
-  return np.where(thresh==255, img_bright, image)
+def brighten(input_img, brightness = 0, contrast = 127):
+    if brightness != 0:
+        if brightness > 0:
+            shadow = brightness
+            highlight = 255
+        else:
+            shadow = 0
+            highlight = 255 + brightness
+        alpha_b = (highlight - shadow)/255
+        gamma_b = shadow
+        
+        buf = cv2.addWeighted(input_img, alpha_b, input_img, 0, gamma_b)
+    else:
+        buf = input_img.copy()
+    
+    if contrast != 0:
+        f = 131*(contrast + 127)/(127*(131-contrast))
+        alpha_c = f
+        gamma_c = 127*(1-f)
+        
+        buf = cv2.addWeighted(buf, alpha_c, buf, 0, gamma_c)
+
+    return buf
