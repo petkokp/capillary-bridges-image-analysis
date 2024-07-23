@@ -2,12 +2,13 @@ from openpyxl import Workbook, load_workbook
 from tkinter import *
 import cv2
 from glob import glob
-from os.path import join, exists, expanduser, getctime
-from os import makedirs, remove
+from os.path import join, expanduser, getctime
+from os import makedirs
 from PIL import Image, ImageTk
 from tkinter import filedialog
 from utilities.models import Models
 from processing.process_image import process_image
+from utilities.default_conversion_scale import DEFAULT_CONVERSION_SCALE
 from pypylon import pylon
 from datetime import datetime
 
@@ -104,8 +105,10 @@ def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str
                                            filetypes=[("Image files", "*.png;*.jpg;*.jpeg;")])
     if file_path:
         image = cv2.imread(file_path)
+
+        scale_entry_value = float(scale_entry.get())
         
-        processed_image, _, values = process_image(image, 0, './temp', model=MODEL, bright=selected_brightness_index == BRIGHTEN)
+        processed_image, _, values = process_image(image, 0, scale_entry_value, './temp', model=MODEL, bright=selected_brightness_index == BRIGHTEN)
         
         update_values_label(values)
 
@@ -207,7 +210,9 @@ def stop_recording(selected_camera_index: str):
             if not ret:
                 break
 
-            processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
+            scale_entry_value = float(scale_entry.get())
+
+            processed_frame, _, values = process_image(frame, 0, scale_entry_value, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
 
             save_current_frame()
 
@@ -303,7 +308,9 @@ def capture_standard(selected_brightness_index: str):
 
     if frame is not None and not is_recording:
         try:
-            processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
+            scale_entry_value = float(scale_entry.get())
+
+            processed_frame, _, values = process_image(frame, 0, scale_entry_value, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
             
             update_values_label(values)
 
@@ -348,14 +355,16 @@ def capture_basler(selected_brightness_index: str):
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
-                try:
-                    processed_frame, _, values = process_image(frame, 0, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
+                #try:
+                    scale_entry_value = float(scale_entry.get())
+
+                    processed_frame, _, values = process_image(frame, 0, scale_entry_value, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
 
                     update_values_label(values)
 
                     show_cam_frame(processed_frame if should_process_image else frame)
-                except:
-                    print('ERROR: Could not process image')
+                # except:
+                #     print('ERROR: Could not process image')
 
             label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
 
@@ -440,7 +449,7 @@ camera_menu.pack(side="right", padx=10, pady=10)
 brighten_menu = OptionMenu(app, StringVar(app, brighten_options[1]), *brighten_options, command=lambda index: select_brightness(index))
 brighten_menu.pack(side="right", padx=10, pady=10)
 
-image_button_basic = Button(app, text="Process an image (basic)", command=lambda: open_image(Models.NAIVE, selected_camera_index, selected_brightness_index))
+image_button_basic = Button(app, text="Process an image", command=lambda: open_image(Models.NAIVE, selected_camera_index, selected_brightness_index))
 image_button_basic.pack(side="right", padx=10, pady=10)
 
 # image_button_neural_network = Button(app, text="Process an image (neural network)", command=lambda: open_image(Models.SAM_FINETUNE, selected_camera_index, selected_brightness_index))
@@ -449,13 +458,13 @@ image_button_basic.pack(side="right", padx=10, pady=10)
 toggle_button = Button(app, text="Toggle processing", command=toggle_processing)
 toggle_button.pack(side="right", padx=10, pady=10)
 
-def exposure_validation_callback(P):
+def only_numbers_validation_callback(P):
     if str.isdigit(P) or P == "": return True
     return False
     
-exposure_validation = (app.register(exposure_validation_callback))
+numbers_validation = (app.register(only_numbers_validation_callback))
 
-exposure_entry = Entry(app, width=10, validate='all', validatecommand=(exposure_validation, '%P'))
+exposure_entry = Entry(app, width=10, validate='all', validatecommand=(numbers_validation, '%P'))
 exposure_entry.pack(side="right", padx=5)
 exposure_entry.config(state="disabled")
 exposure_label = Label(app, text="Exposure time (59 - 1000000 µs):")
@@ -466,5 +475,11 @@ fps_entry.pack(side="right", padx=5)
 fps_entry.config(state="disabled")
 fps_label = Label(app, text="FPS:")
 fps_label.pack(side="right", padx=5)
+
+scale_entry = Entry(app, width=10, validate='all', validatecommand=(numbers_validation, '%P'))
+scale_entry.pack(side="right", padx=5)
+scale_entry.insert(0, DEFAULT_CONVERSION_SCALE)
+scale_label = Label(app, text="Scale (800 pixels to µm):")
+scale_label.pack(side="right", padx=5)
 
 app.mainloop()

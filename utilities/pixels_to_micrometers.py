@@ -1,6 +1,4 @@
-# Convert pixels to micrometers according to data in "./correct_values"
-def pixels_to_micrometers(pixels):
-    known_pixels = 1920
-    known_micrometers = 3659.269
-    micrometers = (pixels * known_micrometers) / known_pixels
+def pixels_to_micrometers(pixels, conversion_scale):
+    BASLER_CAMERA_KNOWN_PIXELS = 800
+    micrometers = (pixels * conversion_scale) / BASLER_CAMERA_KNOWN_PIXELS
     return round(micrometers, 2)

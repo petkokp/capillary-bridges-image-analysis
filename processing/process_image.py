@@ -21,7 +21,7 @@ def get_filtered_and_sorted_contours(contours):
     indices = np.argsort(areas)[::-1][:2]
     return [contours[i] for i in indices]
 
-def measure(roi, index=None, correct_values=None, bright=False):
+def measure(roi, conversion_scale, index=None, correct_values=None, bright=False):
     brightened_image = roi
     
     if bright:
@@ -61,7 +61,7 @@ def measure(roi, index=None, correct_values=None, bright=False):
         return None, None, None
 
     neck_distance, left_contour_rightmost_point, right_contour_leftmost_point = calculate_neck_properties(
-        standard_contour1, standard_contour2)
+        standard_contour1, standard_contour2, conversion_scale)
 
     results = []
 
@@ -141,10 +141,10 @@ def measure(roi, index=None, correct_values=None, bright=False):
 
         if left_major_axis and left_minor_axis:
             left_major_distance = pixels_to_micrometers(
-                np.sqrt((left_major_axis[0][0] - left_major_axis[1][0]) ** 2 + (left_major_axis[0][1] - left_major_axis[1][1]) ** 2))
+                np.sqrt((left_major_axis[0][0] - left_major_axis[1][0]) ** 2 + (left_major_axis[0][1] - left_major_axis[1][1]) ** 2), conversion_scale)
 
             left_minor_distance = pixels_to_micrometers(
-                np.sqrt((left_minor_axis[0][0] - left_minor_axis[1][0]) ** 2 + (left_minor_axis[0][1] - left_minor_axis[1][1]) ** 2))
+                np.sqrt((left_minor_axis[0][0] - left_minor_axis[1][0]) ** 2 + (left_minor_axis[0][1] - left_minor_axis[1][1]) ** 2), conversion_scale)
             
             values['left major'] = left_major_distance
             values['left minor'] = left_minor_distance
@@ -152,23 +152,23 @@ def measure(roi, index=None, correct_values=None, bright=False):
             
         if right_major_axis and right_minor_axis:
             right_major_distance = pixels_to_micrometers(
-                np.sqrt((right_major_axis[0][0] - right_major_axis[1][0]) ** 2 + (right_major_axis[0][1] - right_major_axis[1][1]) ** 2))
+                np.sqrt((right_major_axis[0][0] - right_major_axis[1][0]) ** 2 + (right_major_axis[0][1] - right_major_axis[1][1]) ** 2), conversion_scale)
 
             right_minor_distance = pixels_to_micrometers(
-                np.sqrt((right_minor_axis[0][0] - right_minor_axis[1][0]) ** 2 + (right_minor_axis[0][1] - right_minor_axis[1][1]) ** 2))
+                np.sqrt((right_minor_axis[0][0] - right_minor_axis[1][0]) ** 2 + (right_minor_axis[0][1] - right_minor_axis[1][1]) ** 2), conversion_scale)
 
             values['right major'] = right_major_distance
             values['right minor'] = right_minor_distance
             values['right average'] = (right_major_distance + right_minor_distance) / 2
             
         down_distance = pixels_to_micrometers(
-            np.sqrt(np.sum((contour1_end - contour2_end) ** 2)))
+            np.sqrt(np.sum((contour1_end - contour2_end) ** 2)), conversion_scale)
         up_distance = pixels_to_micrometers(
-            np.sqrt(np.sum((contour1_start - contour2_start) ** 2)))
+            np.sqrt(np.sum((contour1_start - contour2_start) ** 2)), conversion_scale)
         left_distance = pixels_to_micrometers(
-            np.sqrt(np.sum((contour1_start - contour1_end) ** 2)))
+            np.sqrt(np.sum((contour1_start - contour1_end) ** 2)), conversion_scale)
         right_distance = pixels_to_micrometers(
-            np.sqrt(np.sum((contour2_start - contour2_end) ** 2)))
+            np.sqrt(np.sum((contour2_start - contour2_end) ** 2)), conversion_scale)
 
         values['down'] = down_distance
         values['up'] = up_distance
@@ -198,13 +198,13 @@ def measure(roi, index=None, correct_values=None, bright=False):
 
         if left_contour_rightmost_point and right_contour_leftmost_point:
             cv2.line(img_with_line, left_contour_rightmost_point,
-                     right_contour_leftmost_point, (0, 0, 255), 2)
+                     right_contour_leftmost_point, (0, 255, 255), 2)
     else:
         print("Insufficient number of filtered contours.")
 
     return img_with_line, results, values
 
-def process_image(img, index, save_path=None, model=Models.SAM, correct_values=None, bright=False):
+def process_image(img, index, conversion_scale: float, save_path=None, model=Models.SAM, correct_values=None, bright=False):
     # if model == Models.SAM:
     #     image = process_sam(save_path, index, roi)
     # elif model == Models.MOBILE_SAM:
@@ -212,4 +212,4 @@ def process_image(img, index, save_path=None, model=Models.SAM, correct_values=N
     # if model == Models.SAM_FINETUNE:
     #     image = process_sam_finetune(save_path, index, roi)
 
-    return measure(img, index, correct_values, bright)
+    return measure(img, conversion_scale, index, correct_values, bright)

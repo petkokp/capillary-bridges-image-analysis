@@ -1,7 +1,7 @@
 import numpy as np
 from .pixels_to_micrometers import pixels_to_micrometers
 
-def calculate_neck_properties(contour1, contour2):
+def calculate_neck_properties(contour1, contour2, conversion_scale):
     # Calculate the pairwise Euclidean distances between all points in the two contours
     distances = np.linalg.norm(contour1[:, None] - contour2, axis=-1)
 
@@ -13,4 +13,4 @@ def calculate_neck_properties(contour1, contour2):
 
     left_contour_rightmost_point, right_contour_leftmost_point = nearest_points
 
-    return pixels_to_micrometers(np.min(distances)), left_contour_rightmost_point, right_contour_leftmost_point
+    return pixels_to_micrometers(np.min(distances), conversion_scale), left_contour_rightmost_point, right_contour_leftmost_point

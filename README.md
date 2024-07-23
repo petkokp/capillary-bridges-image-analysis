@@ -7,6 +7,11 @@ There can be used two different models for the image segmentation part:
 
 ![image](https://github.com/petkokp/capillary-bridges-image-analysis/assets/61232356/c1f33ff0-3790-4a2b-ad94-a08325a82737)
 
+# Requirements:
+
+- Install Basler camera drivers in order to use a Basler camera
+- Install dependencies - `pip install -r requirements.txt`
+
 # Run GUI app:
 
 `python app.py`
