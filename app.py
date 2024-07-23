@@ -137,15 +137,12 @@ def start_recording(selected_camera_index: str):
     
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
+    fps_value = None
+
     if selected_camera_index == BASLER_CAMERA:
         video_path = join(current_folder_path, "video.mkv")
-
-        fps_value = None
         fps_entry_value = fps_entry.get()
         if fps_entry_value != '': fps_value = round(float(fps_entry_value), 2)   
-        if fps_value:
-            basler_camera.AcquisitionFrameRateEnable.Value = True
-            basler_camera.AcquisitionFrameRate.Value = fps_value
 
         basler_writer = get_writer(
             video_path,  # mkv players often support H.264
@@ -159,11 +156,15 @@ def start_recording(selected_camera_index: str):
                 '24'         # that the camera probably adds static anyway
             ]
         )
-    else:
-        out = cv2.VideoWriter(join(current_folder_path, "video.avi"), 0, 20.0, (640,  480))
-    
+
     if not running_camera:
         open_camera(selected_camera_index, selected_brightness_index=STANDARD_BRIGHTNESS)
+
+    if selected_camera_index == BASLER_CAMERA and fps_value:
+        basler_camera.AcquisitionFrameRateEnable.Value = True
+        basler_camera.AcquisitionFrameRate.Value = fps_value
+    else:
+        out = cv2.VideoWriter(join(current_folder_path, "video.avi"), 0, fps_value, (640,  480))
     
 def stop_recording(selected_camera_index: str):
     global running_camera, is_recording, video_path, frame, processed_frame, current_folder_path, values, basler_writer
@@ -175,17 +176,21 @@ def stop_recording(selected_camera_index: str):
     if is_basler:
         basler_writer.close()
 
-        RECORDINGS_PATH = join(base_dir, RECORDINGS_FOLDER)
-
         cap = cv2.VideoCapture(video_path)
+
+        count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+        print("frames count: ", count)
 
         cap_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         cap_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 
         new_video_path = join(current_folder_path, "video.mp4")
 
+        fps_entry_value = float(fps_entry.get())
+
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        output = cv2.VideoWriter(new_video_path, fourcc, 15,
+        output = cv2.VideoWriter(new_video_path, fourcc, fps_entry_value,
                          (cap_width, cap_height))
         
         while True:
@@ -219,6 +224,7 @@ def stop_recording(selected_camera_index: str):
             currentFrame += 1
 
         new_cap.release()
+        print("currentFrame: ", currentFrame)
     else:
         out.release()
 
@@ -470,10 +476,12 @@ exposure_entry.config(state="disabled")
 exposure_label = Label(app, text="Exposure time (59 - 1000000 µs):")
 exposure_label.pack(side="right", padx=5)
 
+DEFAULT_FPS_VALUE = 60
+
 fps_entry = Entry(app, width=10, validate='all', validatecommand=(numbers_validation, '%P'))
 fps_entry.pack(side="right", padx=5)
-fps_entry.config(state="disabled")
-fps_label = Label(app, text="FPS:")
+fps_entry.insert(0, DEFAULT_FPS_VALUE)
+fps_label = Label(app, text=f"FPS: {DEFAULT_FPS_VALUE}")
 fps_label.pack(side="right", padx=5)
 
 scale_entry = Entry(app, width=10, validate='all', validatecommand=(numbers_validation, '%P'))
