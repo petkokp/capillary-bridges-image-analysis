@@ -205,15 +205,6 @@ def measure(roi, index=None, correct_values=None, bright=False):
     return img_with_line, results, values
 
 def process_image(img, index, save_path=None, model=Models.SAM, correct_values=None, bright=False):
-    top_crop = 60
-    bottom_crop = 70
-    left_crop = 60
-    right_crop = 60
-
-    roi = img[top_crop:-bottom_crop, left_crop:-right_crop]
-    
-    image = roi
-
     # if model == Models.SAM:
     #     image = process_sam(save_path, index, roi)
     # elif model == Models.MOBILE_SAM:
@@ -221,4 +212,4 @@ def process_image(img, index, save_path=None, model=Models.SAM, correct_values=N
     # if model == Models.SAM_FINETUNE:
     #     image = process_sam_finetune(save_path, index, roi)
 
-    return measure(image, index, correct_values, bright)
+    return measure(img, index, correct_values, bright)
