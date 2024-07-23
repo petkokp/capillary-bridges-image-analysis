@@ -341,9 +341,9 @@ def capture_basler(selected_brightness_index: str):
         if exposure_entry_value != '': exposure_time = int(exposure_entry_value)   
         if exposure_time and exposure_time >= MIN_EXPOSURE_TIME and exposure_time <= MAX_EXPOSURE_TIME: basler_camera.ExposureTime.SetValue(exposure_time)
 
-        if not fps_entry_value:
-            fps = basler_camera.ResultingFrameRate.Value
-            update_frame_rate(fps)
+        # if not fps_entry_value:
+        fps = basler_camera.ResultingFrameRate.Value
+        update_frame_rate(fps)
         
         grabResult = basler_camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         if grabResult.GrabSucceeded():
@@ -398,7 +398,7 @@ def reset_label():
 def update_frame_rate(fps):
     if fps is None: return
     
-    formatted_fps = f"FPS: {fps}"
+    formatted_fps = f"FPS: {round(fps, 2)}"
     fps_label.config(text=formatted_fps)
     
 def update_error_message(error):
@@ -470,7 +470,7 @@ exposure_entry.config(state="disabled")
 exposure_label = Label(app, text="Exposure time (59 - 1000000 µs):")
 exposure_label.pack(side="right", padx=5)
 
-fps_entry = Entry(app, width=10, validate='all')
+fps_entry = Entry(app, width=10, validate='all', validatecommand=(numbers_validation, '%P'))
 fps_entry.pack(side="right", padx=5)
 fps_entry.config(state="disabled")
 fps_label = Label(app, text="FPS:")
