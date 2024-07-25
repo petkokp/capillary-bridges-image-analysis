@@ -7,7 +7,7 @@ from utilities.compare_models import compare_models
 from processing.process_test_data import process_test_data
 from utilities.models import Models
 
-MODEL = Models.SAM_FINETUNE #Models.SAM #Models.MOBILE_SAM # "SAM" "NAIVE" # "SAM_FINETUNE"
+MODEL = Models.NAIVE #Models.SAM #Models.MOBILE_SAM # "SAM" "NAIVE" # "SAM_FINETUNE"
 
 arg = ""
 
