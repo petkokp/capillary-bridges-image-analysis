@@ -139,7 +139,14 @@ def measure(roi, conversion_scale, index=None, correct_values=None, bright=False
         if contour2_start[1] < contour2_end[1]:
             contour2_start, contour2_end = contour2_end, contour2_start
 
+        left_major_none = True
+        left_minor_none = True
+
         if left_major_axis and left_minor_axis:
+            left_major_none = all(ele is None for ele in left_major_axis)
+            left_minor_none = all(ele is None for ele in left_minor_axis)
+
+        if not left_major_none and not left_minor_none:
             left_major_distance = pixels_to_micrometers(
                 np.sqrt((left_major_axis[0][0] - left_major_axis[1][0]) ** 2 + (left_major_axis[0][1] - left_major_axis[1][1]) ** 2), conversion_scale)
 
@@ -149,8 +156,15 @@ def measure(roi, conversion_scale, index=None, correct_values=None, bright=False
             values['left major'] = left_major_distance
             values['left minor'] = left_minor_distance
             values['left average'] = (left_major_distance + left_minor_distance) / 2
-            
+
+        right_major_none = True
+        right_minor_none = True
+
         if right_major_axis and right_minor_axis:
+            right_major_none = all(ele is None for ele in right_major_axis)
+            right_minor_none = all(ele is None for ele in right_minor_axis)
+
+        if not right_major_none and not right_minor_none:
             right_major_distance = pixels_to_micrometers(
                 np.sqrt((right_major_axis[0][0] - right_major_axis[1][0]) ** 2 + (right_major_axis[0][1] - right_major_axis[1][1]) ** 2), conversion_scale)
 

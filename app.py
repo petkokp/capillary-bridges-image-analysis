@@ -176,18 +176,14 @@ def stop_recording(selected_camera_index: str):
     if is_basler:
         basler_writer.close()
 
+        fps_entry_value = float(fps_entry.get())
+
         cap = cv2.VideoCapture(video_path)
-
-        count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-
-        print("frames count: ", count)
 
         cap_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         cap_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 
         new_video_path = join(current_folder_path, "video.mp4")
-
-        fps_entry_value = float(fps_entry.get())
 
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         output = cv2.VideoWriter(new_video_path, fourcc, fps_entry_value,
@@ -208,7 +204,6 @@ def stop_recording(selected_camera_index: str):
 
         new_cap = cv2.VideoCapture(new_video_path)
 
-        currentFrame = 0
         while(True):
             ret, frame = new_cap.read()
 
@@ -221,10 +216,7 @@ def stop_recording(selected_camera_index: str):
 
             save_current_frame()
 
-            currentFrame += 1
-
         new_cap.release()
-        print("currentFrame: ", currentFrame)
     else:
         out.release()
 
@@ -361,7 +353,7 @@ def capture_basler(selected_brightness_index: str):
                 show_cam_frame(frame)
                 
             if frame is not None and not is_recording:
-                #try:
+                try:
                     scale_entry_value = float(scale_entry.get())
 
                     processed_frame, _, values = process_image(frame, 0, scale_entry_value, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
@@ -369,8 +361,8 @@ def capture_basler(selected_brightness_index: str):
                     update_values_label(values)
 
                     show_cam_frame(processed_frame if should_process_image else frame)
-                # except:
-                #     print('ERROR: Could not process image')
+                except:
+                    print('ERROR: Could not process image')
 
             label_widget.after(10, lambda: capture_camera(selected_camera_index, selected_brightness_index))
 
@@ -472,7 +464,7 @@ numbers_validation = (app.register(only_numbers_validation_callback))
 
 exposure_entry = Entry(app, width=10, validate='all', validatecommand=(numbers_validation, '%P'))
 exposure_entry.pack(side="right", padx=5)
-exposure_entry.config(state="disabled")
+exposure_entry.insert(0, 5000)
 exposure_label = Label(app, text="Exposure time (59 - 1000000 µs):")
 exposure_label.pack(side="right", padx=5)
 
@@ -487,7 +479,7 @@ fps_label.pack(side="right", padx=5)
 scale_entry = Entry(app, width=10, validate='all', validatecommand=(numbers_validation, '%P'))
 scale_entry.pack(side="right", padx=5)
 scale_entry.insert(0, DEFAULT_CONVERSION_SCALE)
-scale_label = Label(app, text="Scale (800 pixels to µm):")
+scale_label = Label(app, text="800 pixels to µm:")
 scale_label.pack(side="right", padx=5)
 
 app.mainloop()
