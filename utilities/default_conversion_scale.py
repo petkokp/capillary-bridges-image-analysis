@@ -1,1 +1,1 @@
-DEFAULT_CONVERSION_SCALE = 1540 # default coefficient for scaling pixels to get micrometers
+DEFAULT_CONVERSION_SCALE = 6458 # default coefficient for scaling pixels to get micrometers
