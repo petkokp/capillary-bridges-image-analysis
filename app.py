@@ -1,8 +1,7 @@
 from openpyxl import Workbook, load_workbook
 from tkinter import *
 import cv2
-from glob import glob
-from os.path import join, expanduser, getctime
+from os.path import join, expanduser
 from os import makedirs
 from PIL import Image, ImageTk
 from tkinter import filedialog
@@ -11,8 +10,7 @@ from processing.process_image import process_image
 from utilities.default_conversion_scale import DEFAULT_CONVERSION_SCALE
 from pypylon import pylon
 from datetime import datetime
-
-from imageio import get_writer
+import os
 
 width, height = 1300, 700
 
@@ -35,8 +33,6 @@ running_camera = False
 is_recording = False
 is_grabbing = False
 should_process_image = True
-
-BASLER_TEMP_VIDEO_PATH = "basler_temp_video"
 
 STANDARD_CAMERA = "Standard"
 BASLER_CAMERA = "Basler"
@@ -89,6 +85,60 @@ def show_cam_frame(frame):
     label_widget.photo_image = img
     label_widget.configure(image=img)
 
+def convert_avi_to_mp4(avi_file_path, output_name):
+    os.popen(f"ffmpeg -i {avi_file_path} -c:v mpeg4 {output_name}")
+    return True
+
+def open_video(MODEL, selected_camera_index: str, selected_brightness_index: str):
+    global running_camera, frame, processed_frame, values
+
+    file_path = filedialog.askopenfilename(title="Select a video file",
+                                           filetypes=[("Video files", "*.avi;" "*.mp4;*.mkv;")])
+
+    if file_path:
+        video_button_basic.config(state="disabled")
+
+        video_path = file_path
+    
+        if file_path.split("/")[-1].endswith(".avi"):
+            convert_avi_to_mp4(file_path, "temp_video.mp4")
+
+            video_path = "temp_video.mp4"
+
+        cap = cv2.VideoCapture(video_path)
+
+        while not cap.isOpened():
+            cap = cv2.VideoCapture(video_path)
+            cv2.waitKey(1000)
+            print("Wait for the header")
+
+        pos_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)
+
+        scale_entry_value = float(scale_entry.get())
+
+        bright_mode = selected_brightness_index == BRIGHTEN
+
+        while True:
+            flag, frame = cap.read()
+            if flag:
+                processed_frame, _, values = process_image(frame, 0, scale_entry_value, model=Models.NAIVE, bright=bright_mode)
+
+                save_current_frame()
+
+                pos_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)
+            else:
+                # The next frame is not ready, so we try to read it again
+                cap.set(cv2.CAP_PROP_POS_FRAMES, pos_frame-1)
+                # It is better to wait for a while for the next frame to be ready
+                cv2.waitKey(1000)
+
+            if cap.get(cv2.CAP_PROP_POS_FRAMES) == cap.get(cv2.CAP_PROP_FRAME_COUNT):
+                # If the number of captured frames is equal to the total number of frames,
+                # we stop
+                video_button_basic.config(state="normal")
+                os.remove("temp_video.mp4")
+                break
+
 def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str):
     global running_camera, frame, processed_frame, values
     if running_camera:
@@ -101,145 +151,36 @@ def open_image(MODEL, selected_camera_index: str, selected_brightness_index: str
         
         reset_label()
 
-    file_path = filedialog.askopenfilename(title="Select an image file",
+    file_paths = filedialog.askopenfilenames(title="Select image files",
                                            filetypes=[("Image files", "*.png;*.jpg;*.jpeg;")])
-    if file_path:
-        image = cv2.imread(file_path)
+    
+    image_button_basic.config(state="disabled")
+
+    for file_path in file_paths:
+        frame = cv2.imread(file_path)
 
         scale_entry_value = float(scale_entry.get())
         
-        processed_image, _, values = process_image(image, 0, scale_entry_value, './temp', model=MODEL, bright=selected_brightness_index == BRIGHTEN)
+        processed_frame, _, values = process_image(frame, 0, scale_entry_value, './temp', model=MODEL, bright=selected_brightness_index == BRIGHTEN)
         
-        update_values_label(values)
+        save_current_frame()
 
-        if processed_image is not None:
-            frame = image
-            processed_frame = processed_image
-            show_cam_frame(processed_image)
-            save_button.config(state="normal")
+        # update_values_label(values)
 
-def start_recording(selected_camera_index: str):
-    global is_recording, out, running_camera, basler_writer, video_path
+        # if processed_image is not None:
+        #     frame = image
+        #     processed_frame = processed_image
+        #     show_cam_frame(processed_image)
+        #     save_button.config(state="normal")
 
-    is_recording = True
-    
-    create_images_folder_structure()
-    
-    save_button.config(state="disabled")
-    
-    stop_button.config(state="normal")
-    
-    exposure_entry.config(state="disabled")
-
-    fps_entry.config(state="disabled")
-    
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-    fps_value = None
-
-    if selected_camera_index == BASLER_CAMERA:
-        video_path = join(current_folder_path, "video.mkv")
-        fps_entry_value = fps_entry.get()
-        if fps_entry_value != '': fps_value = round(float(fps_entry_value), 2)   
-
-        basler_writer = get_writer(
-            video_path,  # mkv players often support H.264
-            fps=fps_value,  # FPS is in units Hz; should be real-time.
-            codec='libx264',  # When used properly, this is basically "PNG for video" (i.e. lossless)
-            quality=None,  # disables variable compression
-            ffmpeg_params=[  # compatibility with older library versions
-                '-preset',   # set to fast, faster, veryfast, superfast, ultrafast
-                'fast',      # for higher speed but worse compression
-                '-crf',      # quality; set to 0 for lossless, but keep in mind
-                '24'         # that the camera probably adds static anyway
-            ]
-        )
-
-    if not running_camera:
-        open_camera(selected_camera_index, selected_brightness_index=STANDARD_BRIGHTNESS)
-
-    if selected_camera_index == BASLER_CAMERA and fps_value:
-        basler_camera.AcquisitionFrameRateEnable.Value = True
-        basler_camera.AcquisitionFrameRate.Value = fps_value
-    else:
-        out = cv2.VideoWriter(join(current_folder_path, "video.avi"), 0, fps_value, (640,  480))
-    
-def stop_recording(selected_camera_index: str):
-    global running_camera, is_recording, video_path, frame, processed_frame, current_folder_path, values, basler_writer
-    
-    if not is_recording: return
-
-    is_basler = selected_camera_index == BASLER_CAMERA
-
-    if is_basler:
-        basler_writer.close()
-
-        fps_entry_value = float(fps_entry.get())
-
-        cap = cv2.VideoCapture(video_path)
-
-        cap_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        cap_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-
-        new_video_path = join(current_folder_path, "video.mp4")
-
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        output = cv2.VideoWriter(new_video_path, fourcc, fps_entry_value,
-                         (cap_width, cap_height))
-        
-        while True:
-            ret, frame = cap.read()
-
-            if not ret:
-                break
-
-            output.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-
-        cap.release()
-        output.release()
-
-        #remove(video_path)
-
-        new_cap = cv2.VideoCapture(new_video_path)
-
-        while(True):
-            ret, frame = new_cap.read()
-
-            if not ret:
-                break
-
-            scale_entry_value = float(scale_entry.get())
-
-            processed_frame, _, values = process_image(frame, 0, scale_entry_value, model=Models.NAIVE, bright=selected_brightness_index == BRIGHTEN)
-
-            save_current_frame()
-
-        new_cap.release()
-    else:
-        out.release()
-
-    is_recording = False
-    
-    stop_button.config(state="disabled")
-    
-    if running_camera:
-        reset_label()
-        
-        if selected_camera_index == STANDARD_CAMERA and standard_camera is not None:
-            standard_camera.release()
-        elif is_basler and basler_camera is not None:
-            basler_camera.StopGrabbing()
-        
-        running_camera = False
+    image_button_basic.config(state="normal")
 
 def open_camera(selected_camera_index: str, selected_brightness_index: str):
     global running_camera, standard_camera, basler_camera, is_grabbing, converter, image_count
     is_grabbing = False
     image_count = 0
     
-    if not is_recording: create_images_folder_structure()
+    #if not is_recording: create_images_folder_structure()
     
     if not running_camera:
         running_camera = True
@@ -271,9 +212,10 @@ def save_frame(frame, processed_frame, values):
     processed_image_filename = f"processed_{image_count}.png"
     
     if current_folder_path == None:
-        list_of_files = glob(join(base_dir, '*'))
-        latest_file = max(list_of_files, key=getctime)
-        current_folder_path = latest_file
+        create_images_folder_structure()
+        # list_of_files = glob(join(base_dir, '*'))
+        # latest_file = max(list_of_files, key=getctime)
+        # current_folder_path = latest_file
         
     if worksheet == None:
         workbook = load_workbook(join(current_folder_path, EXCEL_VALUES_FILE_NAME))
@@ -301,7 +243,7 @@ def capture_standard(selected_brightness_index: str):
     _, frame = standard_camera.read()
         
     if frame is not None and is_recording:
-        out.write(frame)
+        #out.write(frame)
         show_cam_frame(frame)
 
     if frame is not None and not is_recording:
@@ -435,11 +377,11 @@ realtime_button.pack(side="left", padx=10, pady=10)
 save_button = Button(app, text="Save image", command=lambda: save_current_frame(), state="disabled")
 save_button.pack(side="left", padx=10, pady=10)
 
-start_button = Button(app, text="Start recording", command=lambda: start_recording(selected_camera_index))
-start_button.pack(side="left", padx=10, pady=10)
+# start_button = Button(app, text="Start recording", command=lambda: start_recording(selected_camera_index))
+# start_button.pack(side="left", padx=10, pady=10)
 
-stop_button = Button(app, text="Stop recording", command=lambda: stop_recording(selected_camera_index), state="disabled")
-stop_button.pack(side="left", padx=10, pady=10)
+# stop_button = Button(app, text="Stop recording", command=lambda: stop_recording(selected_camera_index), state="disabled")
+# stop_button.pack(side="left", padx=10, pady=10)
 
 camera_menu = OptionMenu(app, StringVar(app, camera_options[1]), *camera_options, command=lambda index: select_camera(index))
 camera_menu.pack(side="right", padx=10, pady=10)
@@ -447,8 +389,11 @@ camera_menu.pack(side="right", padx=10, pady=10)
 brighten_menu = OptionMenu(app, StringVar(app, brighten_options[1]), *brighten_options, command=lambda index: select_brightness(index))
 brighten_menu.pack(side="right", padx=10, pady=10)
 
-image_button_basic = Button(app, text="Process an image", command=lambda: open_image(Models.NAIVE, selected_camera_index, selected_brightness_index))
+image_button_basic = Button(app, text="Process images", command=lambda: open_image(Models.NAIVE, selected_camera_index, selected_brightness_index))
 image_button_basic.pack(side="right", padx=10, pady=10)
+
+video_button_basic = Button(app, text="Process video", command=lambda: open_video(Models.NAIVE, selected_camera_index, selected_brightness_index))
+video_button_basic.pack(side="right", padx=10, pady=10)
 
 # image_button_neural_network = Button(app, text="Process an image (neural network)", command=lambda: open_image(Models.SAM_FINETUNE, selected_camera_index, selected_brightness_index))
 # image_button_neural_network.pack(side="right", padx=10, pady=10)
