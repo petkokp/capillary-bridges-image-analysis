@@ -1,5 +1,7 @@
 # Determining the Parameters of Capillary Bridges via Machine Vision
 
+![Image from GUI](./images/gui.png)
+
 ## Overview & Goal
 
 Manual measurement of parameters from experimental images of capillary bridges is slow, tedious, and imprecise. This project provides a complete software solution to automate this process using machine vision techniques.
@@ -18,9 +20,7 @@ The core of the project is a multi-step image processing pipeline to segment the
 
 All input images are first converted from RGB to grayscale using the standard luminosity method:
 
-$
-I_\text{gray} = 0.2989 \times R + 0.5870 \times G + 0.1140 \times B
-$
+$I_\text{gray} = 0.2989 \times R + 0.5870 \times G + 0.1140 \times B$
 
 ### 2\. Segmentation
 
@@ -65,10 +65,7 @@ A neural network approach was used for more robust segmentation, especially in c
 
   * **Fine-Tuned SAM (LoRA):** This is the most accurate model. The baseline SAM was fine-tuned using **Low-Rank Adaptation (LoRA)** on a custom dataset of 115 training and 50 test images. This method "freezes" the original weights $W$ and only trains two small adapter matrices, $B$ and $A$.
 
-    $$
-    W’ = W + B \cdot A
-
-    $$
+    $$W’ = W + B \cdot A$$
   * **Hyperparameters:** 74 epochs, Learning Rate $1 \times 10^{-4}$, LoRA Rank 512.
 
 ### 3\. Contour Extraction
@@ -121,9 +118,7 @@ Ellipses are fitted to the contour points $C_l$ and $C_r$ using the Fitzgibbon a
 **Pixel to µm Conversion**
 All pixel measurements $p$ are converted to micrometers (µm) using the experimentally determined calibration factor.
 
-$
-\text{c}(p) = \frac{p \times 3659.269}{1920}
-$
+$\text{c}(p) = \frac{p \times 3659.269}{1920}$
 
 **Derived Ratios**
 Finally, dimensionless ratios used in the theoretical model are calculated (where $n$ is the neck length):
@@ -166,4 +161,3 @@ The algorithms (especially Otsu's) struggle with images that have:
 ## Future Work
 
 The fine-tuned SAM model is accurate but too slow for real-time use. Otsu's method is fast but less accurate. A promising next step is to apply the **LoRA fine-tuning method to FastSAM/MobileSAM**. This could result in a model that is both fast (suitable for real-time) and highly accurate.
-$$
