@@ -162,7 +162,6 @@ cython_debug/
 /data
 /weights
 /broken
-/images
 /sam_results
 /sam_final_results
 
