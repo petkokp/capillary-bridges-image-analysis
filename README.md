@@ -160,4 +160,4 @@ The algorithms (especially Otsu's) struggle with images that have:
 
 ## Future Work
 
-The fine-tuned SAM model is accurate but too slow for real-time use. Otsu's method is fast but less accurate. A promising next step is to apply the **LoRA fine-tuning method to FastSAM/MobileSAM**. This could result in a model that is both fast (suitable for real-time) and highly accurate.
+The fine-tuned SAM model is accurate but too slow for real-time use. Otsu's method is fast but less accurate. A promising next step is to apply the **LoRA fine-tuning method to FastSAM/MobileSAM**. This could result in a model that is both fast (suitable for real-time) and highly accurate. The current dataset is quite small. **Annotating more images** and training the models on them is another promising direction for future work.
